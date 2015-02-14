@@ -1,0 +1,30 @@
+<html>
+<head>
+<title>Hummuse</title>
+</head>
+<body>
+	<h2>Add Projects</h2>
+	<form method="post">
+		<label>
+			Project Title
+			<input name="ptitle" value="{{pName}}">
+		</label>	
+		<label>
+			Additional Notes
+			<input name="pnotes" value="{{pNotes}}">
+		</label>	
+		<input type="submit">
+		<div>{{message}}</div>
+	</form>
+	<div class="listing">
+	{% if pList %}
+	<h3>Your Projects!</h3>
+	<ul>
+	{% for p in pList %}
+	<li>{{p.projectName}}</li>
+	{% endfor %}
+	</ul>
+	{% endif %}
+	</div>
+</body>	
+</html>	
