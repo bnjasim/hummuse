@@ -3,7 +3,7 @@
 import webapp2
 import os
 import jinja2
-from google.appengine.ext import db
+from google.appengine.ext import ndb
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
@@ -22,28 +22,44 @@ class Handler(webapp2.RequestHandler):
 #	def get(self):
 		
 		
-class Projects(db.Model):
-	projectName = db.StringProperty(required = True)
-	projectNotes = db.TextProperty()
-	projectCreated = db.DateTimeProperty(auto_now_add = True)
+class Projects(ndb.Model):
+	projectName = ndb.StringProperty(required = True)
+	projectNotes = ndb.TextProperty()
+	projectCreated = ndb.DateTimeProperty(auto_now_add = True)
+	projectActive = ndb.BooleanProperty(default = True)
 
 class AddProjectHandler(Handler):
-
 	def get(self):
-		p_cursor = db.GqlQuery("SELECT * FROM Projects")
-		p = list(p_cursor)
-		self.render("add_project.html", pList = p)
+		p_cursor = ndb.gql("SELECT * FROM Projects")
+		all_projects = list(p_cursor)
+		active_projects = [p for p in all_projects if p.projectActive is not False]
+		self.render("add_project.html", pList = active_projects)
 	
 	def post(self):
 		pName = self.request.get('ptitle')
 		pNotes = self.request.get('pnotes')
-		if (pName and pNotes):
-			pro = Projects(projectName=pName,projectNotes=pNotes)
+		if (pName):
+			pro = Projects(projectName=pName, projectNotes=pNotes)
 			pro.put()
 			self.redirect('/')
 		else:
 			self.render("add_project.html", pName=pName, pNotes=pNotes, message="The fields can't be empty")
-	
+
+
+class DeleteProjectHandler(Handler):
+	def post(self):
+		project_id = self.request.get('key_id')
+		project_key = ndb.Key( 'Projects', int(project_id) )
+		p = project_key.get()
+		if (p):
+			p.projectActive = False
+			p.put()
+			self.response.out.write("Project \""+ p.projectName +"\" deleted successfully! ")
+		else: self.response.out.write("Couldn't delete")
+		self.redirect('/')
+
+
 app = webapp2.WSGIApplication([
-    ('/', AddProjectHandler)
+    ('/', AddProjectHandler),
+    ('/delproject', DeleteProjectHandler)
 ], debug=True)

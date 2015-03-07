@@ -1,16 +1,17 @@
 <html>
 <head>
 <title>Hummuse</title>
+<link type="text/css" rel="stylesheet" href="static/main_css.css"/>
 </head>
 <body>
 	<h2>Add Projects</h2>
 	<form method="post">
 		<label>
-			Project Title
+			Project Title:
 			<input name="ptitle" value="{{pName}}">
 		</label>	
 		<label>
-			Additional Notes
+			Additional Notes:
 			<input name="pnotes" value="{{pNotes}}">
 		</label>	
 		<input type="submit">
@@ -21,7 +22,11 @@
 	<h3>Your Projects!</h3>
 	<ul>
 	{% for p in pList %}
-	<li>{{p.projectName}}</li>
+		<li><form style="margin: 0; padding: 0;" method="post" action="delproject"> {{p.projectName}}
+		<input style="display: inline;" type="submit" value="Delete">
+			<span class="vis"> <input name="key_id" value="{{ p.key.id() }}"> </span>
+		</form>
+		</li>
 	{% endfor %}
 	</ul>
 	{% endif %}
