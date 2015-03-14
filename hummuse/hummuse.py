@@ -2,10 +2,10 @@
 # Wireframe created
 import webapp2
 import os
-import logging
 import jinja2
 from google.appengine.ext import ndb
 from google.appengine.api import users
+import logging
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
@@ -14,17 +14,20 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
 class Account(ndb.Model):
 	nickname = ndb.StringProperty()
 	email = ndb.StringProperty()
+	userCreated = ndb.DateTimeProperty(auto_now_add = True)
 
+	@classmethod
 	@ndb.transactional
 	def my_get_or_insert(cls, id, **kwds):
 		key = ndb.Key(cls, id)
 		ent = key.get()
 		if ent is not None:
-			return (ent, False)  # False meaning "not created"
+			return False  # False meaning "Already existing"
 		ent = cls(**kwds)
 		ent.key = key
 		ent.put()
-		return (ent, True)  # True meaning "created"
+		return True  # True meaning "Newly created"
+	
 		
 class Projects(ndb.Model):
 	projectName = ndb.StringProperty(required = True)
@@ -43,65 +46,102 @@ class Handler(webapp2.RequestHandler):
 	def render(self, template, **html_add_ins):
 		self.write(self.render_str(template, **html_add_ins))
 
-	def check_user_login(self):
-		user = users.get_current_user()
-		message = "No message"
-		if user is None: 
-			self.response.write("Redirecting to the login page......")
-			self.redirect(users.create_login_url(self.request.uri))
-			user = users.get_current_user()
-			logging.error("User is "+ str(user))	
-			user_id = user.user_id()
-			user_in_db, status = Account.my_get_or_insert(user_id, nickname = user.nickname(), email = user.email())
-   			message = "entity created"
-		logout_url = users.create_logout_url('/')
-		return (user, logout_url,message) 
-
 
 class AddProjectHandler(Handler):
-	def get(self):
-		user, logout,message = self.check_user_login() # make the user login
-		user_name = user.nickname()
 
-		p_cursor = ndb.gql("SELECT * FROM Projects")
-		all_projects = list(p_cursor)
-		active_projects = [p for p in all_projects if p.projectActive is not False]
-		self.render("add_project.html", pList = active_projects, user_name = user_name, logout_url = logout,message=message)
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			logout = users.create_logout_url('/')
+			user_ent_key = ndb.Key(Account, user.user_id())	
+
+			fresh_user = self.request.get('fresh_user')
+			message_new_user = ''
+			if fresh_user == 'True':
+				message_new_user = 'Thank you for Signing Up to Hummuse'
+
+			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
+			all_projects = list(p_cursor)
+			active_projects = [p for p in all_projects if p.projectActive is not False]
+			self.render("add_project.html", 
+					     pList = active_projects, 
+					     user_name = user.nickname(), 
+					     logout_url = logout,
+					     Congrats = message_new_user)
 	
 	def post(self):
-		user, logout = self.check_user_login() # make sure user login
-		user_name = user.nickname()
-		user_ent_key = ndb.Key(Account, user.user_id())
-		self.response.write(user_ent_key)
-
-		pName = self.request.get('ptitle')
-		pNotes = self.request.get('pnotes')
-		if (pName):
-			pro = Projects(parent = user_ent_key, projectName=pName, projectNotes=pNotes)
-			pro.put()
-			self.redirect('/')
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
 		else:
-			self.render("add_project.html", pName=pName, pNotes=pNotes, message="The fields can't be empty")
+			user = users.get_current_user()
+			user_ent_key = ndb.Key(Account, user.user_id())	
+			pName = self.request.get('ptitle')
+			pNotes = self.request.get('pnotes')
+			if (pName):
+				pro = Projects(parent = user_ent_key, 
+							   projectName=pName, 
+							   projectNotes=pNotes)
+				pro.put()
+				self.redirect('/')
+			else:
+				self.render("add_project.html", 
+						     pName=pName, 
+							 pNotes=pNotes, 
+		  				     warning="The fields can't be empty")
 
 
 class DeleteProjectHandler(Handler):
 	def post(self):
-		user, logout = self.check_user_login() # make sure user login
-		user_name = user.nick_name()
-		user_ent_key = ndb.Key(Account, user.user_id())
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())
+			project_id = self.request.get('key_id')
+			project_key = ndb.Key( 'Projects', int(project_id), parent = user_ent_key )
+			p = project_key.get()
+			if (p):
+				p.projectActive = False
+				p.put()
+				self.response.out.write("Project \""+ p.projectName +"\" deleted successfully! ")
+			else: self.response.out.write("Couldn't delete")
+			self.redirect('/')
 
-		project_id = self.request.get('key_id')
-		project_key = ndb.Key( 'Projects', int(project_id), parent = user_ent_key )
-		p = project_key.get()
-		if (p):
-			p.projectActive = False
-			p.put()
-			self.response.out.write("Project \""+ p.projectName +"\" deleted successfully! ")
-		else: self.response.out.write("Couldn't delete")
-		self.redirect('/')
+
+class RegisterUser(webapp2.RequestHandler):
+	"Redirected to here from the login page. So always user is not None"
+
+	def get(self):
+		user = users.get_current_user()
+		if user:
+			user_id = user.user_id()
+			nickname = user.nickname()
+			email = user.email()
+			status = Account.my_get_or_insert(user_id, 
+											  nickname = nickname, 
+											  email = email)
+			self.redirect('/?fresh_user=' + str(status))			
+		
+		else:
+			self.response.write('Access Denied')
+
 
 
 app = webapp2.WSGIApplication([
     ('/', AddProjectHandler),
-    ('/delproject', DeleteProjectHandler)
+    ('/delproject', DeleteProjectHandler),
+    ('/new_user', RegisterUser)
 ], debug=True)
+
+#@webapp_add_wsgi_middleware
+#def main(app):
+
+
+#if __name__ == "__main__":
+#	main(app)
