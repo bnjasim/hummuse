@@ -75,16 +75,11 @@ class AddProjectHandler(Handler):
 			logout = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
 
-			fresh_user = self.request.get('fresh_user')
 			form_warning = self.request.get('warning')
 			d_message = self.request.get('dmessage')
 			pName = self.request.get('pname')
 			pNotes = self.request.get('pnotes')
 			#logging.error(type(pname))
-			message_new_user = ''
-			if fresh_user == 'True':
-				message_new_user = 'Thank you for Signing Up to Hummuse'
-
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			active_projects = [p for p in all_projects if p.projectActive is not False]
@@ -92,7 +87,6 @@ class AddProjectHandler(Handler):
 					     pList = active_projects, 
 					     user_name = user.nickname(), 
 					     logout_url = logout,
-					     Congrats = message_new_user,
 					     form_warning = form_warning,
 					     delete_message = d_message,
 					     pName = pName,
@@ -121,9 +115,9 @@ class AddProjectHandler(Handler):
 					pro.put()
 					self.redirect('/')
 				else:
-					self.redirect(format('/?warning=The Project '+str(pName)+' already exists!&pname='+str(pName)+'&pnotes='+str(pNotes)))
+					self.redirect(format('/project?warning=The Project '+str(pName)+' already exists!&pname='+str(pName)+'&pnotes='+str(pNotes)))
 			else:
-				self.redirect(format('/?warning=Project Title is too short&pnotes='+str(pNotes)))
+				self.redirect(format('/project?warning=Project Title is too short&pnotes='+str(pNotes)))
 
 
 class DeleteProjectHandler(Handler):
@@ -143,7 +137,7 @@ class DeleteProjectHandler(Handler):
 				p.put()
 				message = format("Project \""+ p.projectName +"\" deleted successfully! ")
 			else: message = "Couldn't delete"
-			self.redirect('/?dmessage='+message)
+			self.redirect('/project?dmessage='+message)
 
 class MakeEntryHandler(Handler):
 	
@@ -155,6 +149,7 @@ class MakeEntryHandler(Handler):
 		else:
 			logout = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
+			
 			form_warning = self.request.get('form_warning')
 			message = self.request.get('message')
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
@@ -254,6 +249,14 @@ class ListEntriesHandler(Handler):
 			self.redirect(users.create_login_url('/new_user'))
 			
 		else:
+			fresh_user = self.request.get('fresh_user')
+			message_new_user = ''
+			if fresh_user == 'True':
+				message_new_user = 'Thank you for Signing Up to Hummuse'
+
+			link_addprojects = '/project'
+			link_makeentry = '/entry'
+
 			logout = users.create_logout_url('/')
 			user = users.get_current_user()
 			user_ent_key = ndb.Key(Account, user.user_id())
@@ -263,7 +266,10 @@ class ListEntriesHandler(Handler):
 			self.render("entries_main_page.html",
 						 user_name = user.nickname(), 
 					     logout_url = logout,
-						 entries = all_entries)
+					     link_addprojects = link_addprojects,
+					     link_makeentry = link_makeentry,
+						 entries = all_entries,
+						 message = message_new_user)
 
 
 
@@ -279,15 +285,26 @@ class RegisterUserHandler(webapp2.RequestHandler):
 			status = Account.my_get_or_insert(user_id, 
 											  nickname = nickname, 
 											  email = email)
-			self.redirect('/?fresh_user=' + str(status))			
+			self.redirect('/list?fresh_user=' + str(status))			
 		
 		else:
 			self.response.write('Access Denied')
 
 
 
+class HomeHandler(Handler):
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			self.redirect('/list')
+
+
 app = webapp2.WSGIApplication([
-    ('/', AddProjectHandler),
+	('/', HomeHandler),
+    ('/project', AddProjectHandler),
     ('/delproject', DeleteProjectHandler),
     ('/entry', MakeEntryHandler),
     ('/new_user', RegisterUserHandler),

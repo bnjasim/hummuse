@@ -5,7 +5,12 @@
 </head>
 <body>
 	Welcome {{user_name}} <br>
-	<a href="{{logout_url}}">Signout</a> <br><br>
+	<a href="{{logout_url}}">Signout</a> <br>
+	{{message}}
+	<br><br>
+	<a href="{{link_addprojects}}">Add a Project</a>
+	<a href="{{link_makeentry}}">Make a new Entry</a>
+	<br><br>
 	<h2>Your Past Activities</h2>
 	<table border="1" style="width:50%">
 	{% for e in entries %}
