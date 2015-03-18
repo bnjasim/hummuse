@@ -7,7 +7,7 @@
 	<h2>Make a new Entry</h2>
 	Welcome {{user_name}} <br>
 	<a href="{{logout_url}}">Signout</a> <br><br>
-	
+	{{special_message}}
 	<form method="post" action="\entry">
 		<label>
 			Choose Project:
@@ -39,8 +39,10 @@
 
 		<label> Date:
 		<select name="date">
+				{% set i = 0 %}
 				{% for d in prev_days_str %}
-					<option value={{d}}>{{d}}</option> 
+					<option value={{i}}>{{d}}</option> 
+					{% set i = i+1 %}
 				{% endfor %}
 			</select>
 		</label>

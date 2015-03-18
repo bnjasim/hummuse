@@ -44,12 +44,12 @@ class Projects(ndb.Model):
 
 class Entry(ndb.Model):
 	# The parent of an Entry is an Account again
-	date = ndb.DateTimeProperty()	
-	project = ndb.KeyProperty()
+	date = ndb.DateProperty()	
+	project = ndb.KeyProperty(Projects)
 	hoursWorked = ndb.FloatProperty()
 	isStarWork = ndb.BooleanProperty(default = False)
 	satisfactionIndex = ndb.IntegerProperty()
-	notes = ndb.StringProperty()
+	notes = ndb.TextProperty()
 
 
 class Handler(webapp2.RequestHandler):
@@ -155,6 +155,7 @@ class MakeEntryHandler(Handler):
 			logout = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
 			form_warning = self.request.get('form_warning')
+			message = self.request.get('message')
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			active_projects = [p for p in all_projects if p.projectActive is not False]
@@ -179,7 +180,8 @@ class MakeEntryHandler(Handler):
 					     logout_url = logout,
 					     projects = active_projects,
 					     form_warning = form_warning,
-					     prev_days_str = prev_days)
+					     prev_days_str = prev_days,
+					     special_message = message)
 
 	def post(self):
 		user = users.get_current_user()
@@ -193,14 +195,56 @@ class MakeEntryHandler(Handler):
 			notes = self.request.get('notes')
 			hours = self.request.get('hours')
 			minutes = self.request.get('minutes')
-			if (pName):
-				
-				
-				self.redirect('/')
-			else:
-				self.redirect('/entry?form_warning=The fields cannot be empty')
-		
+			special = self.request.get('starred')
+			date = self.request.get('date')
+			stars =self.request.get('satisfaction')
+			# Error handling of the form elements
+			form_warning = ""
+			project = str(project)
+			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
+			all_projects = list(p_cursor)
+			active_projects_id = [p.key.id() for p in all_projects if p.projectActive is not False]
+			if (project not in active_projects_id):
+				self.redirect('/entry?form_warning= Invalid Project Name')
+			
+			stars = int(stars)
+			if(stars > 5): stars = 1 
 
+
+			t = datetime.date.today()
+			today = (t.day, t.month, t.year)
+			temp = today
+			seven_prev_days = [today] #initialize
+			for i in range(7):
+				temp1 = utils.get_prev_date(temp)
+				seven_prev_days.append(temp1)
+				temp = temp1
+			date_of_entry = seven_prev_days[int(date)]	# in (d,m,y) format
+			ndb_date = t.replace(day = date_of_entry[0],
+								 month = date_of_entry[1],
+								 year = date_of_entry[2])
+
+			hours_worked = int(hours) + int(minutes)/60.0
+			if special == 'True':
+				starred = True
+			else: starred = False
+
+			projectKey = ndb.Key(Account, user.user_id(), Projects, int(project))
+			logging.error(projectKey)
+			entry = Entry(parent = user_ent_key, 
+							project=projectKey, 
+							notes=notes,
+							date = ndb_date,	
+							hoursWorked = hours_worked,
+							isStarWork = starred,
+							satisfactionIndex = stars)
+			entry.put()
+			self.redirect('/entry?message=Entry entered successfully')
+
+
+class ListEntriesHandler(Handler):
+
+	def get(self):
 
 
 
@@ -228,7 +272,8 @@ app = webapp2.WSGIApplication([
     ('/', AddProjectHandler),
     ('/delproject', DeleteProjectHandler),
     ('/entry', MakeEntryHandler),
-    ('/new_user', RegisterUserHandler)
+    ('/new_user', RegisterUserHandler),
+    ('/list', ListEntriesHandler)
 ], debug=True)
 
 #@webapp_add_wsgi_middleware

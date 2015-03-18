@@ -26,7 +26,20 @@ def get_prev_date(curr_date):
 	if day==1 and month==1:
 		return (31, 12, year-1)
 							
-			
+def ndb_date_format(date):
+	#ndb format is yyyy-mm-dd
+	d,m,y = date		
+	if d<10:
+		d_s = '0'+str(d)	
+	else: d_s = str(d)	
+	if m<10:
+		m_s = '0'+str(m)	
+	else: m_s = str(m)	
+	date_str = str(y)+"-"+m_s+"-"+d_s
+	return date_str
+	
 
 def error_check_name(title):
 	pass
+
+	
