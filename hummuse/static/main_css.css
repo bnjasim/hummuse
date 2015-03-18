@@ -2,3 +2,10 @@
 	visibility: hidden;
 	color: red;
 }
+
+table {
+    border-collapse: collapse;
+}
+td {
+    padding: 0;
+}

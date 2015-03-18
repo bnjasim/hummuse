@@ -44,8 +44,9 @@ class Projects(ndb.Model):
 
 class Entry(ndb.Model):
 	# The parent of an Entry is an Account again
-	date = ndb.DateProperty()	
+	date = ndb.DateProperty(required = True)	
 	project = ndb.KeyProperty(Projects)
+	projectName = ndb.StringProperty(required = True)
 	hoursWorked = ndb.FloatProperty()
 	isStarWork = ndb.BooleanProperty(default = False)
 	satisfactionIndex = ndb.IntegerProperty()
@@ -200,13 +201,15 @@ class MakeEntryHandler(Handler):
 			stars =self.request.get('satisfaction')
 			# Error handling of the form elements
 			form_warning = ""
-			project = str(project)
+			project = int(project)
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
+			all_projects_id = [p.key.id() for p in all_projects]
 			active_projects_id = [p.key.id() for p in all_projects if p.projectActive is not False]
 			if (project not in active_projects_id):
 				self.redirect('/entry?form_warning= Invalid Project Name')
-			
+			index = all_projects_id.index(project)
+			projName = all_projects[index].projectName
 			stars = int(stars)
 			if(stars > 5): stars = 1 
 
@@ -233,6 +236,7 @@ class MakeEntryHandler(Handler):
 			logging.error(projectKey)
 			entry = Entry(parent = user_ent_key, 
 							project=projectKey, 
+							projectName = projName,
 							notes=notes,
 							date = ndb_date,	
 							hoursWorked = hours_worked,
@@ -243,9 +247,23 @@ class MakeEntryHandler(Handler):
 
 
 class ListEntriesHandler(Handler):
-
+	
 	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			logout = users.create_logout_url('/')
+			user = users.get_current_user()
+			user_ent_key = ndb.Key(Account, user.user_id())
 
+			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
+			all_entries = qry.fetch()	
+			self.render("entries_main_page.html",
+						 user_name = user.nickname(), 
+					     logout_url = logout,
+						 entries = all_entries)
 
 
 

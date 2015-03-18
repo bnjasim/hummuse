@@ -1,0 +1,20 @@
+<html>
+<head>
+<title>Hummuse</title>
+<link type="text/css" rel="stylesheet" href="static/main_css.css"/>
+</head>
+<body>
+	Welcome {{user_name}} <br>
+	<a href="{{logout_url}}">Signout</a> <br><br>
+	<h2>Your Past Activities</h2>
+	<table border="1" style="width:50%">
+	{% for e in entries %}
+
+  	<tr>
+    	<td>{{e.date}}</td>
+    	<td>{{e.projectName}}</td> 
+    	<td>{{e.hoursWorked}}</td>
+  	</tr>
+
+	{% endfor %}
+	</table>
