@@ -1,0 +1,65 @@
+<html>
+<head>
+<title>Hummuse</title>
+<link type="text/css" rel="stylesheet" href="static/main_css.css"/>
+</head>
+<body>
+	<h2>Make a new Entry</h2>
+	Welcome {{user_name}} <br>
+	<a href="{{logout_url}}">Signout</a> <br><br>
+	
+	<form method="post" action="\entry">
+		<label>
+			Choose Project:
+			<select name="project">
+				{% for p in projects %}
+				<option value="{{p.key.id()}}"> {{p.projectName}} </option>
+				{% endfor %}
+			</select>	
+		</label>	
+		<br>
+		<a href='/'>Add a new project</a>
+		<br><br>
+		<label>
+			Number of hours worked: 
+			<select name="hours">
+				{% for h in range(16) %}
+					<option value="{{h}}">{{h}}</option> 
+				{% endfor %}
+			</select>
+			minutes: <select name="minutes">
+				{% for m in range(12) %}
+					<option value="{{5*m}}">{{5*m}}</option> 
+				{% endfor %}
+			</select>
+			</label>	
+			<br>
+			<label>Special work?: <input type="checkbox" name="starred"></label>
+		<br><br>
+
+		<label> Date:
+		<select name="date">
+				{% for d in prev_days_str %}
+					<option value={{d}}>{{d}}</option> 
+				{% endfor %}
+			</select>
+		</label>
+		<br><br>
+		<label>Satisfaction Index:
+			<select name="satisfaction">
+				{% for i in range(5) %}
+					<option value="{{i+1}}">{{i+1}} Star</option> 
+				{% endfor %}
+			</select>
+		</label>
+		<br><br>
+		<label>
+			Special Notes:
+			<input type="textarea" name="notes" value="{{notes}}">
+		</label>	
+		<input type="submit">
+		<div>{{form_warning}}</div>
+	</form>
+	
+</body>	
+</html>	

@@ -1,11 +1,17 @@
 # Created on 27-Jan-2015-Tuesday
 # Wireframe created
+__author__ = 'Binu Jasim (bnjasim@gmail)'
+__website__ = 'www.hummuse.com'
+
 import webapp2
 import os
 import jinja2
 from google.appengine.ext import ndb
 from google.appengine.api import users
 import logging
+import datetime
+
+import utils
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
@@ -30,10 +36,20 @@ class Account(ndb.Model):
 	
 		
 class Projects(ndb.Model):
+	# The parent of a Project is an Account
 	projectName = ndb.StringProperty(required = True)
 	projectNotes = ndb.TextProperty()
 	projectCreated = ndb.DateTimeProperty(auto_now_add = True)
 	projectActive = ndb.BooleanProperty(default = True)
+
+class Entry(ndb.Model):
+	# The parent of an Entry is an Account again
+	date = ndb.DateTimeProperty()	
+	project = ndb.KeyProperty()
+	hoursWorked = ndb.FloatProperty()
+	isStarWork = ndb.BooleanProperty(default = False)
+	satisfactionIndex = ndb.IntegerProperty()
+	notes = ndb.StringProperty()
 
 
 class Handler(webapp2.RequestHandler):
@@ -59,6 +75,11 @@ class AddProjectHandler(Handler):
 			user_ent_key = ndb.Key(Account, user.user_id())	
 
 			fresh_user = self.request.get('fresh_user')
+			form_warning = self.request.get('warning')
+			d_message = self.request.get('dmessage')
+			pName = self.request.get('pname')
+			pNotes = self.request.get('pnotes')
+			#logging.error(type(pname))
 			message_new_user = ''
 			if fresh_user == 'True':
 				message_new_user = 'Thank you for Signing Up to Hummuse'
@@ -70,9 +91,14 @@ class AddProjectHandler(Handler):
 					     pList = active_projects, 
 					     user_name = user.nickname(), 
 					     logout_url = logout,
-					     Congrats = message_new_user)
+					     Congrats = message_new_user,
+					     form_warning = form_warning,
+					     delete_message = d_message,
+					     pName = pName,
+					     pNotes = pNotes)
 	
 	def post(self):
+		
 		user = users.get_current_user()
 		if user is None: 
 			self.redirect(users.create_login_url('/new_user'))
@@ -80,22 +106,27 @@ class AddProjectHandler(Handler):
 		else:
 			user = users.get_current_user()
 			user_ent_key = ndb.Key(Account, user.user_id())	
-			pName = self.request.get('ptitle')
+			pName = self.request.get('pname')
+			logging.error(pName)
 			pNotes = self.request.get('pnotes')
+			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
+			all_projects = list(p_cursor)
+			all_projects_name = [p.projectName for p in all_projects]
 			if (pName):
-				pro = Projects(parent = user_ent_key, 
-							   projectName=pName, 
-							   projectNotes=pNotes)
-				pro.put()
-				self.redirect('/')
+				if (pName not in all_projects_name):
+					pro = Projects(parent = user_ent_key, 
+								   projectName=pName, 
+								   projectNotes=pNotes)
+					pro.put()
+					self.redirect('/')
+				else:
+					self.redirect(format('/?warning=The Project '+str(pName)+' already exists!&pname='+str(pName)+'&pnotes='+str(pNotes)))
 			else:
-				self.render("add_project.html", 
-						     pName=pName, 
-							 pNotes=pNotes, 
-		  				     warning="The fields can't be empty")
+				self.redirect(format('/?warning=Project Title is too short&pnotes='+str(pNotes)))
 
 
 class DeleteProjectHandler(Handler):
+	
 	def post(self):
 		user = users.get_current_user()
 		if user is None: 
@@ -109,12 +140,72 @@ class DeleteProjectHandler(Handler):
 			if (p):
 				p.projectActive = False
 				p.put()
-				self.response.out.write("Project \""+ p.projectName +"\" deleted successfully! ")
-			else: self.response.out.write("Couldn't delete")
-			self.redirect('/')
+				message = format("Project \""+ p.projectName +"\" deleted successfully! ")
+			else: message = "Couldn't delete"
+			self.redirect('/?dmessage='+message)
+
+class MakeEntryHandler(Handler):
+	
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			logout = users.create_logout_url('/')
+			user_ent_key = ndb.Key(Account, user.user_id())	
+			form_warning = self.request.get('form_warning')
+			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
+			all_projects = list(p_cursor)
+			active_projects = [p for p in all_projects if p.projectActive is not False]
+
+			t = datetime.date.today()
+			today = (t.day, t.month, t.year)
+			temp = today
+			seven_prev_days = [today] #initialize
+			for i in range(7):
+				temp1 = utils.get_prev_date(temp)
+				seven_prev_days.append(temp1)
+				temp = temp1
+			# format into Jan-3-2015 format	
+			prev_days = ["today","yesterday"]
+			for i in range(7 - 2):
+				temp = seven_prev_days[2+i]
+				new_date_str = utils.months[temp[1]] + " - " + str(temp[0])
+				prev_days.append(new_date_str)
+
+			self.render("make_entry.html", 
+						 user_name = user.nickname(), 
+					     logout_url = logout,
+					     projects = active_projects,
+					     form_warning = form_warning,
+					     prev_days_str = prev_days)
+
+	def post(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/new_user'))
+			
+		else:
+			user = users.get_current_user()
+			user_ent_key = ndb.Key(Account, user.user_id())	
+			project = self.request.get('project')
+			notes = self.request.get('notes')
+			hours = self.request.get('hours')
+			minutes = self.request.get('minutes')
+			if (pName):
+				
+				
+				self.redirect('/')
+			else:
+				self.redirect('/entry?form_warning=The fields cannot be empty')
+		
 
 
-class RegisterUser(webapp2.RequestHandler):
+
+
+
+class RegisterUserHandler(webapp2.RequestHandler):
 	"Redirected to here from the login page. So always user is not None"
 
 	def get(self):
@@ -136,7 +227,8 @@ class RegisterUser(webapp2.RequestHandler):
 app = webapp2.WSGIApplication([
     ('/', AddProjectHandler),
     ('/delproject', DeleteProjectHandler),
-    ('/new_user', RegisterUser)
+    ('/entry', MakeEntryHandler),
+    ('/new_user', RegisterUserHandler)
 ], debug=True)
 
 #@webapp_add_wsgi_middleware

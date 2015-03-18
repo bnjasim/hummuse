@@ -10,17 +10,17 @@
 	<a href="{{logout_url}}">Signout</a> <br><br>
 	
 	
-	<form method="post">
+	<form method="post" action="/">
 		<label>
 			Project Title:
-			<input name="ptitle" value="{{pName}}">
+			<input name="pname" value="{{pName}}">
 		</label>	
 		<label>
 			Additional Notes:
 			<input name="pnotes" value="{{pNotes}}">
 		</label>	
 		<input type="submit">
-		<div>{{warning}}</div>
+		<div>{{form_warning}}</div>
 	</form>
 	<div class="listing">
 	{% if pList %}
@@ -35,6 +35,8 @@
 	{% endfor %}
 	</ul>
 	{% endif %}
+	<br>
+	{{delete_message}}
 	</div>
 </body>	
 </html>	
