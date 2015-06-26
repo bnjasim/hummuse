@@ -1,0 +1,238 @@
+<html>
+<head>
+<title>Hummuse Home</title>
+<link rel="stylesheet" type="text/css" href="static/css/bootstrap.css"/>
+<link rel="stylesheet" type="text/css" href="static/css/my_css.css"/>
+</head>
+<body>
+
+
+  <div class="navbar-fixed-top navbar-default my-font-heading" id= "my-fixed-top">
+	<div class="container">	
+		<div class="navbar-header">
+			<a class="navbar-brand" href="/">Hummuse</a>
+			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#ex-collapse">
+			  <span class="sr-only"></span>
+			  <span class="icon-bar"></span>
+			  <span class="icon-bar"></span>
+			  <span class="icon-bar"></span>
+			</button>
+		</div>
+		
+		<div class="collapse navbar-collapse" id="ex-collapse">
+		  
+		  <ul class="nav navbar-nav navbar-right custom">
+		    <li class="active" id="home"><a href="/"><div>Home</div></a></li>
+		  
+		    <li>
+		      <a href="/data">
+		        <div class="add-data">	
+		          <div class="my-thumbnail-marker">
+		  		    <img src="static/images/mark.png" style="max-width:100%; max-height:100%;">
+		  		  </div>  
+		  	      <span>Data</span>	
+		  	    </div>
+		      </a>
+		    </li>
+
+		  <li><a><div>Plans</div></a></li>
+
+		  <li><a><div>Connect</div></a></li>
+
+		  <li class="dropdown">
+		  	<a class="dropdown-toggle" data-toggle="dropdown">{{user_name}}<span class="caret"></span></a>
+		    <ul class="dropdown-menu">
+		      <li><a>Profile</a></li>
+		      <li class="divider"></li>
+		      <li><a href="{{logout_url}}">Logout</a></li>
+		    </ul>
+		  </li>
+
+		  </ul>
+
+		  <form class="navbar-form navbar-left" role="search">
+		  <div class="form-group search-form-padding">
+		    <input type="text" class='form-control search-form-control' placeholder="Search Tags">
+		  </div>
+		  <button type="button" class="btn btn-success">Search</button>
+		  </form>
+
+		</div>
+
+	</div>
+</div>
+
+
+<div class="container">
+<div class="row">
+
+<div class="col-md-2 col-md-push-10" id="right-panel"> 
+
+  <div class="timer well" data-toggle="tooltip" title="Work Tracker" data-placement="left">
+    <div class="timer-header">
+      <div id="left-caret-arrow" class="left-caret theme-color"></div>
+      <div class="truncated">Hummuse</div>
+      <div id="right-caret-arrow" class="right-caret theme-color"></div>
+    </div>
+
+    <div class="timer-body">
+      <span id="timer-time">--:--</span>     
+    </div>
+    <div class="timer-footer">
+ 	  <div id="play-pause-timer" class="theme-color"><div class="glyphicon glyphicon-play"></div></div>
+ 	  <div id="stop-timer"><div class="glyphicon glyphicon-stop"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="col-md-2 col-md-pull-2">
+ <!-- Add event not shown in home page
+  <div id="leftpanel-add-event" class="link-panel">
+    <div class="my-thumbnail-marker">
+      <img src="./images/mark.png" style="max-width:100%; max-height:100%;">
+	</div>	
+    <span><a>New Event</a></span>
+  </div>
+  -->
+
+  <div class="left-panel left-panel-first">
+    <a href="/projects">Projects</a>
+  </div>
+
+  <div class="panel-content left-panel">
+    <a>Tags</a>
+  </div>  
+
+  <div class="panel-content" id="summary-panel">	
+	<div class="panel-header">Summary</div>
+	<ul class="left-panel-ul">
+	  <li><a class="left-panel-link-highlight">Daily</a></li>
+	  <li><a>Weekly</a></li>
+	  <li><a>Monthly</a></li>
+	</ul>
+  </div>
+
+  <div id="star-panel" class="link-panel">
+    <div class="glyphicon glyphicon-star-empty theme-color"></div>
+    <a>Special Works</a>
+  </div>
+
+  <div class="panel-content" id="project-panel">	
+	<div class="panel-header">Project
+	  <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div>
+	</div>
+	<ul class="left-panel-ul">
+	  <li>
+	    <a class="left-panel-link-highlight">All</a>
+	  </li>
+	  <li><a>Hummuse</a></li>
+	  <li><a>Data Science</a></li>
+	  <li><a>NLP Teaching</a></li>
+	  <li><a>Quora</a></li>
+	</ul>
+  </div>
+
+</div>
+
+<div class="col-md-8 col-md-pull-2">
+
+  <div class='daily-box'>
+    <div class="date-box">
+      April-19-Sun
+    </div>  
+    <div class="row">
+      <div class="col-md-8">
+    	Bhārat Gaṇarājya
+    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
+      </div>	
+      <div class="col-md-4 graphics-area">
+        Graphics Area is for displaying bar charts!<br/>
+        Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west
+      </div>
+    </div>  
+  </div>
+
+  <div class='daily-box'>
+    <div class="date-box">
+      April-18-Sat
+    </div>  	
+    <div class="row">
+      <div class="col-md-8">
+  		Flag	Emblem
+    	Motto: "Satyameva Jayate" 
+    	"Truth Alone Triumphs"[1]
+    	Anthem: Jana Gana Mana
+    	Asia. It is the seventh-largest country by area, the second-most populous country with over 1.2 billion people, and the most populous democracy in the world. Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west, and the Bay of Bengal on the south-east, it shares land borders with Pakistan to the west;[d] China, Nepal, and Bhutan to the north-east; and Burma (Myanmar) and Bangladesh to the east. In the Indian Ocean, India is in the vicinity of Sri Lanka and the Maldives; in addition, India's Andaman and Nicobar Islands share a maritime border with Thailand and Indonesia.    
+      </div>	
+      <div class="col-md-4 graphics-area">
+        Graphics Area<br/>
+        Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west, and the Bay of Bengal on the south-east, it shares land borders with Pakistan to the west;[d] China, Nepal, and Bhutan to the north-east; and Burma (Myanmar) and Bangladesh to the east.
+      </div>
+    </div>  
+     
+  </div>
+  
+  <div class="daily-box">
+   <div class="date-box">
+      April-17-Fri
+   </div> 
+   <div class="row">
+      <div class="col-md-8">
+    	Bhārat Gaṇarājya
+    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
+      </div>	
+      <div class="col-md-4">
+        
+		Hummuse: 9hrs <br/>
+		<br>Exercise: 1hr
+      </div>
+    </div>  
+  </div>    
+    
+
+  <div class="daily-box">
+   <div class="date-box">
+      April-16-Thur
+   </div> 
+
+<div class="row">
+      <div class="col-md-8">
+    	Bhārat Gaṇarājya
+    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
+      </div>	
+      <div class="col-md-4">
+        Graphics Area
+      </div>
+    </div>  
+
+
+</div>
+
+</div>
+</div>
+</div>
+
+<!-- Modal1 - Timer Stop modal -->
+  <div class="modal fade modal-center" id="stop-timer-modal" tabindex="-1" role="modal" aria-labelledby="stop-timer-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <h4 class="modal-title" id="stop-timer-modal-label">Timer Stopped</h4>
+        </div>
+        <div class="modal-body">
+          Form
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" data-dismiss="modal">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<script src="static/js/jquery-2.1.3.js" type="text/javascript"></script>
+<script src="static/js/bootstrap.js" type="text/javascript"></script>
+<script src="static/js/my_js.js" type="text/javascript"></script>
+</body>
+</html>

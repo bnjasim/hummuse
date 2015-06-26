@@ -10,6 +10,7 @@ from google.appengine.ext import ndb
 from google.appengine.api import users
 import logging
 import datetime
+import urllib
 
 import utils
 
@@ -17,10 +18,14 @@ template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir), 
 								autoescape = True)
 # username is not Id because users might change their user name or email
+# lateron add username and password for anonymous login
+# Add OAuth - may need to store refresh token etc.
 class Account(ndb.Model):
 	nickname = ndb.StringProperty()
 	email = ndb.StringProperty()
 	userCreated = ndb.DateTimeProperty(auto_now_add = True)
+	#accountType = ndb.IntegerProperty(default = 0)
+	# account type -> 0:anonymous, 1:google-oauth 2:facebook etc.
 
 	@classmethod
 	@ndb.transactional
@@ -36,21 +41,26 @@ class Account(ndb.Model):
 	
 		
 class Projects(ndb.Model):
-	# The parent of a Project is an Account
+	# Set Account as the parent of a Project
 	projectName = ndb.StringProperty(required = True)
-	projectNotes = ndb.TextProperty()
+	projectDescription = ndb.TextProperty()
 	projectCreated = ndb.DateTimeProperty(auto_now_add = True)
 	projectActive = ndb.BooleanProperty(default = True)
+	projectShared = ndb.BooleanProperty(default = False)
+	projectPriority = ndb.FloatProperty(default = 1) # how recent
+	# + how many times its used in the past
+	#projectColor = ndb.StringProperty(default = '#ffffff')
 
+# Base class for Work and Event
 class Entry(ndb.Model):
-	# The parent of an Entry is an Account again
+	# Need to set Account as the parent of every entry
 	date = ndb.DateProperty(required = True)	
-	project = ndb.KeyProperty(Projects)
-	projectName = ndb.StringProperty(required = True)
-	hoursWorked = ndb.FloatProperty()
-	isStarWork = ndb.BooleanProperty(default = False)
-	satisfactionIndex = ndb.IntegerProperty()
+	isAchievement = ndb.BooleanProperty(default = False)
 	notes = ndb.TextProperty()
+	tags = ndb.StringProperty(repeated = True)
+	project = ndb.KeyProperty(Projects)
+	hoursWorked = ndb.FloatProperty()
+	datakind = ndb.StringProperty(choices = ["work", "event"])
 
 
 class Handler(webapp2.RequestHandler):
@@ -69,28 +79,29 @@ class AddProjectHandler(Handler):
 	def get(self):
 		user = users.get_current_user()
 		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
+			self.redirect(users.create_login_url('/welcome'))
 			
 		else:
-			logout = users.create_logout_url('/')
+			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
 
-			form_warning = self.request.get('warning')
-			d_message = self.request.get('dmessage')
-			pName = self.request.get('pname')
-			pNotes = self.request.get('pnotes')
+			#form_warning = self.request.get('warning')
+			#d_message = self.request.get('dmessage')
+			#pName = self.request.get('pname')
+			#pNotes = self.request.get('pnotes')
 			#logging.error(type(pname))
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			active_projects = [p for p in all_projects if p.projectActive is not False]
-			self.render("add_project.html", 
-					     pList = active_projects, 
-					     user_name = user.nickname(), 
-					     logout_url = logout,
-					     form_warning = form_warning,
-					     delete_message = d_message,
-					     pName = pName,
-					     pNotes = pNotes)
+			self.render("projects.html", 
+					     #pList = active_projects, 
+					     user_name = utils.shorten_name(user.nickname()), 
+					     logout_url = logout_url#,
+					     #form_warning = form_warning,
+					     #delete_message = d_message,
+					     #pName = pName,
+					     #pNotes = pNotes
+					     )
 	
 	def post(self):
 		
@@ -103,7 +114,7 @@ class AddProjectHandler(Handler):
 			user_ent_key = ndb.Key(Account, user.user_id())	
 			pName = self.request.get('pname')
 			logging.error(pName)
-			pNotes = self.request.get('pnotes')
+			pDesc = self.request.get('pdesc')
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			all_projects_name = [p.projectName for p in all_projects]
@@ -111,9 +122,9 @@ class AddProjectHandler(Handler):
 				if (pName not in all_projects_name):
 					pro = Projects(parent = user_ent_key, 
 								   projectName=pName, 
-								   projectNotes=pNotes)
+								   projectDescription=pDesc)
 					pro.put()
-					self.redirect('/')
+					self.redirect('/projects')
 				else:
 					self.redirect(format('/project?warning=The Project '+str(pName)+' already exists!&pname='+str(pName)+'&pnotes='+str(pNotes)))
 			else:
@@ -147,37 +158,23 @@ class MakeEntryHandler(Handler):
 			self.redirect(users.create_login_url('/new_user'))
 			
 		else:
-			logout = users.create_logout_url('/')
+			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
 			
-			form_warning = self.request.get('form_warning')
-			message = self.request.get('message')
+			#form_warning = self.request.get('form_warning')
+			#message = self.request.get('message')
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			active_projects = [p for p in all_projects if p.projectActive is not False]
 
-			t = datetime.date.today()
-			today = (t.day, t.month, t.year)
-			temp = today
-			seven_prev_days = [today] #initialize
-			for i in range(7):
-				temp1 = utils.get_prev_date(temp)
-				seven_prev_days.append(temp1)
-				temp = temp1
-			# format into Jan-3-2015 format	
-			prev_days = ["today","yesterday"]
-			for i in range(7 - 2):
-				temp = seven_prev_days[2+i]
-				new_date_str = utils.months[temp[1]] + " - " + str(temp[0])
-				prev_days.append(new_date_str)
-
-			self.render("make_entry.html", 
-						 user_name = user.nickname(), 
-					     logout_url = logout,
-					     projects = active_projects,
-					     form_warning = form_warning,
-					     prev_days_str = prev_days,
-					     special_message = message)
+			
+			self.render("data.html", 
+						 user_name = utils.shorten_name(user.nickname()), 
+					     logout_url = logout_url,
+					     projects = active_projects
+					    # form_warning = form_warning,
+					    # special_message = message
+					    )
 
 	def post(self):
 		user = users.get_current_user()
@@ -185,60 +182,65 @@ class MakeEntryHandler(Handler):
 			self.redirect(users.create_login_url('/new_user'))
 			
 		else:
+			#fileds in Data
+			#date = ndb.DateProperty(required = True)	
+			#isAchievement = ndb.BooleanProperty(default = False)
+			#notes = ndb.TextProperty()
+			#tags = ndb.StringProperty(repeated = True)
+			#project = ndb.KeyProperty(Projects)
+			#hoursWorked = ndb.FloatProperty()
 			user = users.get_current_user()
 			user_ent_key = ndb.Key(Account, user.user_id())	
-			project = self.request.get('project')
-			notes = self.request.get('notes')
-			hours = self.request.get('hours')
-			minutes = self.request.get('minutes')
-			special = self.request.get('starred')
-			date = self.request.get('date')
-			stars =self.request.get('satisfaction')
-			# Error handling of the form elements
-			form_warning = ""
-			project = int(project)
-			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
-			all_projects = list(p_cursor)
-			all_projects_id = [p.key.id() for p in all_projects]
-			active_projects_id = [p.key.id() for p in all_projects if p.projectActive is not False]
-			if (project not in active_projects_id):
-				self.redirect('/entry?form_warning= Invalid Project Name')
-			index = all_projects_id.index(project)
-			projName = all_projects[index].projectName
-			stars = int(stars)
-			if(stars > 5): stars = 1 
 
-
+			# date - a string of the format "Wed Jun 24 2015" - 15 characters
+			date = self.request.get('date') 
 			t = datetime.date.today()
-			today = (t.day, t.month, t.year)
-			temp = today
-			seven_prev_days = [today] #initialize
-			for i in range(7):
-				temp1 = utils.get_prev_date(temp)
-				seven_prev_days.append(temp1)
-				temp = temp1
-			date_of_entry = seven_prev_days[int(date)]	# in (d,m,y) format
-			ndb_date = t.replace(day = date_of_entry[0],
-								 month = date_of_entry[1],
-								 year = date_of_entry[2])
+			ndb_date = t.replace(day = int(date[8:10]),
+								 month = utils.months[ date[4:7] ],
+								 year = int(date[11:15])
+								 )
+			
+			# IsAchievement
+			if(self.request.get('achievement') == 'true'):
+				achievement = True
+			else:
+				achievement = False	
+			# notes
+			notes = self.request.get('notes')
+			#tags
+			# convert space seperated string to list of strings
+			#logging.error(self.request.get('tags'))
+			tags = str(urllib.unquote(self.request.get('tags'))).split(',') 
 
-			hours_worked = int(hours) + int(minutes)/60.0
-			if special == 'True':
-				starred = True
-			else: starred = False
+			#logging.error(self.request.get('formkind'))
+			formkind = str( (self.request.get('formkind') ) ) 
+			if formkind == 'work':
+				# project id
+				project = int( self.request.get('project') )
+				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
+				# working time
+				hours = int(self.request.get('hours')) + int(self.request.get('minutes'))/60.0
 
-			projectKey = ndb.Key(Account, user.user_id(), Projects, int(project))
-			logging.error(projectKey)
-			entry = Entry(parent = user_ent_key, 
+				entry = Entry(parent = user_ent_key,
+							datakind = formkind,
 							project=projectKey, 
-							projectName = projName,
 							notes=notes,
 							date = ndb_date,	
-							hoursWorked = hours_worked,
-							isStarWork = starred,
-							satisfactionIndex = stars)
+							hoursWorked = hours,
+							isAchievement = achievement,
+							tags = tags)
+
+			else:
+				entry = Entry(parent = user_ent_key,
+							datakind = formkind,
+							notes=notes,
+							date = ndb_date,	
+							isAchievement = achievement,
+							tags = tags
+							)
+
 			entry.put()
-			self.redirect('/entry?message=Entry entered successfully')
+			self.redirect('/data')	
 
 
 class ListEntriesHandler(Handler):
@@ -252,7 +254,7 @@ class ListEntriesHandler(Handler):
 			fresh_user = self.request.get('fresh_user')
 			message_new_user = ''
 			if fresh_user == 'True':
-				message_new_user = 'Thank you for Signing Up to Hummuse'
+				message_new_user = 'Thank you for Signing Up for Hummuse'
 
 			link_addprojects = '/project'
 			link_makeentry = '/entry'
@@ -264,7 +266,7 @@ class ListEntriesHandler(Handler):
 			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
 			all_entries = qry.fetch()	
 			self.render("entries_main_page.html",
-						 user_name = user.nickname(), 
+						 user_name = utils.shorten_name(user.nickname()), 
 					     logout_url = logout,
 					     link_addprojects = link_addprojects,
 					     link_makeentry = link_makeentry,
@@ -272,42 +274,50 @@ class ListEntriesHandler(Handler):
 						 message = message_new_user)
 
 
-
-class RegisterUserHandler(webapp2.RequestHandler):
+# Registers new users in Account
+class LoginHandler(webapp2.RequestHandler):
 	"Redirected to here from the login page. So always user is not None"
 
 	def get(self):
 		user = users.get_current_user()
-		if user:
+		if user is None: 
+			self.redirect(users.create_login_url('/login'))
+		
+		else:
 			user_id = user.user_id()
-			nickname = user.nickname()
+			nickname = utils.shorten_name(user.nickname())
 			email = user.email()
 			status = Account.my_get_or_insert(user_id, 
 											  nickname = nickname, 
 											  email = email)
-			self.redirect('/list?fresh_user=' + str(status))			
+			self.redirect('/?fresh_user=' + str(status))			
 		
-		else:
-			self.response.write('Access Denied')
-
 
 
 class HomeHandler(Handler):
 	def get(self):
 		user = users.get_current_user()
 		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
+			self.redirect('/welcome')
 			
 		else:
-			self.redirect('/list')
+			logout_url = users.create_logout_url('/')
+			self.render('home.html',
+						 user_name = utils.shorten_name(user.nickname()), 
+						 logout_url = logout_url)
 
+
+class WelcomePageHandler(Handler):
+	def get(self):
+		self.render("welcome.html")
 
 app = webapp2.WSGIApplication([
 	('/', HomeHandler),
-    ('/project', AddProjectHandler),
+    ('/projects', AddProjectHandler),
     ('/delproject', DeleteProjectHandler),
-    ('/entry', MakeEntryHandler),
-    ('/new_user', RegisterUserHandler),
+    ('/data', MakeEntryHandler),
+    ('/login', LoginHandler),
+    ('/welcome', WelcomePageHandler),
     ('/list', ListEntriesHandler)
 ], debug=True)
 

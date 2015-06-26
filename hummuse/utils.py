@@ -1,7 +1,7 @@
+import re
 
-
-months ={1:'Jan', 2:'Feb', 3:'Mar', 4:'Apr', 5:'May', 6:'Jun',
-				7:'Jul', 8:'Aug', 9:'Sep', 10:'Oct', 11:'Nov', 12:'Dec'}
+months ={'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6,
+				'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
 	
 def get_prev_date(curr_date):
 	# returns day and month of minus days before curr_date
@@ -43,3 +43,37 @@ def error_check_name(title):
 	pass
 
 	
+
+# nickname shortener
+# written on 23-Jun-2015
+def ucase(name):
+	if (len(name) < 1):
+		return name
+	else:	
+		return name[0].upper() + name[1:]
+
+def shorten_name(name):
+	s = name.find(' ')
+	if(s >= 0):
+		name = name[0:s]
+	l = len(name)
+	a = name.find('@')
+
+	if(l < 8):
+		return ucase(name)
+
+	if(a >= 0):
+		name = name[0:a]	
+		l = len(name)
+
+	if(l < 8):
+		return ucase(name)
+
+	r = re.search('[0-9]', name)
+	if(r and r.start() > 3):
+		return ucase(name[0:r.start()])
+
+	return ucase(name[0:7])			
+
+		
+			
