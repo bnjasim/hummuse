@@ -120,7 +120,7 @@
 
   <div class="panel-content" id="project-panel">	
 	<div class="panel-header">Project
-	  <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div>
+	 <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
 	</div>
 	<ul class="left-panel-ul">
 	  <li>
@@ -137,75 +137,95 @@
 
 <div class="col-md-8 col-md-pull-2">
 
-  <div class='daily-box'>
-    <div class="date-box">
-      April-19-Sun
-    </div>  
-    <div class="row">
-      <div class="col-md-8">
-    	Bhārat Gaṇarājya
-    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
-      </div>	
-      <div class="col-md-4 graphics-area">
-        Graphics Area is for displaying bar charts!<br/>
-        Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west
-      </div>
-    </div>  
-  </div>
+  {% for daybox in entries_by_date %}
+    <div class='daily-box'>
+      <div class="date-box">
+        {{daybox.dateString}}
+      </div>  
+      <div class="row">
+        <div class="col-md-8 notes-area">
+        <ul>
+        {% for entry in daybox.entries %}
+          <li class="entry-box">
+            <div class="bullet-raja-pencil"> 
+              {% if entry.datakind == 'work' %}            
+                <span class="glyphicon glyphicon-pencil"></span>
+              {% else %}
+                <span class="glyphicon glyphicon-paperclip"></span>
+              {% endif %}  
+            </div>
 
-  <div class='daily-box'>
-    <div class="date-box">
-      April-18-Sat
-    </div>  	
-    <div class="row">
-      <div class="col-md-8">
-  		Flag	Emblem
-    	Motto: "Satyameva Jayate" 
-    	"Truth Alone Triumphs"[1]
-    	Anthem: Jana Gana Mana
-    	Asia. It is the seventh-largest country by area, the second-most populous country with over 1.2 billion people, and the most populous democracy in the world. Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west, and the Bay of Bengal on the south-east, it shares land borders with Pakistan to the west;[d] China, Nepal, and Bhutan to the north-east; and Burma (Myanmar) and Bangladesh to the east. In the Indian Ocean, India is in the vicinity of Sri Lanka and the Maldives; in addition, India's Andaman and Nicobar Islands share a maritime border with Thailand and Indonesia.    
-      </div>	
-      <div class="col-md-4 graphics-area">
-        Graphics Area<br/>
-        Bounded by the Indian Ocean on the south, the Arabian Sea on the south-west, and the Bay of Bengal on the south-east, it shares land borders with Pakistan to the west;[d] China, Nepal, and Bhutan to the north-east; and Burma (Myanmar) and Bangladesh to the east.
-      </div>
-    </div>  
-     
-  </div>
-  
-  <div class="daily-box">
-   <div class="date-box">
-      April-17-Fri
-   </div> 
-   <div class="row">
-      <div class="col-md-8">
-    	Bhārat Gaṇarājya
-    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
-      </div>	
-      <div class="col-md-4">
-        
-		Hummuse: 9hrs <br/>
-		<br>Exercise: 1hr
-      </div>
-    </div>  
-  </div>    
-    
+            {% if entry.datakind == 'work' %}
+              <div class="entry-box-title">{{ entry.projectName }}</div>:
+            {% endif %}  
 
-  <div class="daily-box">
-   <div class="date-box">
-      April-16-Thur
-   </div> 
+            {% if entry.notes == '' %}
+              <i style="font-style:15px;">No notes</i>
+            {% else %}
+              {% if entry.isNotesLarge %}  
+    	          <span class="short-note">{{ entry.notesCutShort | safe }}</span>
+                <span class="full-note">{{ entry.notes | safe }}</span>
+              {% else %}  
+                {{ entry.notes | safe }}
+              {% endif %}  
+            {% endif %}
+            
+            <div class="tags-box">
+              {% for tag in entry.tags %}
+              <div class="tags-added">
+                {{ tag }}
+              </div>
+              {% endfor %}
+            </div>  
+          </li>  
+        {% endfor %}  
+        </ul>
+        </div>	
 
-<div class="row">
-      <div class="col-md-8">
-    	Bhārat Gaṇarājya
-    	Horizontal tricolor flag bearing, from top to bottom, deep saffron, white, and green horizontal bands. In the center of the white band is a navy-blue wheel with 24 spokes.	Three lions facing left, right, and toward viewer, atop a frieze containing a galloping horse, a 24-spoke wheel, and an elephant. Underneath is a motto: <p>"\uसत्यमेव जयते".</p>	
-      </div>	
-      <div class="col-md-4">
-        Graphics Area
-      </div>
-    </div>  
+        <div class="col-md-4">
+          <div class="container-div-for-table">
+          <table class="work-hour-table">
+          {% for entry in daybox.entries if entry.datakind == 'work' %}
+            <tr>
+              <td class="first-column">
+                <b>{{ entry.projectName }}</b>:
+              </td>
 
+              <td class="second-column">
+                {% if entry.hours != 0 %}
+                  {{entry.hours}}h 
+                {% endif %}  
+
+                {% if entry.minutes != 0 %}
+                  {{entry.minutes}}m
+                {% endif %}  
+              </td>  
+            </tr>  
+          {% endfor %}
+          <tr>
+            <td class="first-column">
+                <b>Total</b>:
+              </td>
+              <td class="second-column">
+                {% if daybox.totalHours != 0 %}
+                  {{daybox.totalHours}}h 
+                {% endif %}  
+
+                {% if daybox.totalMinutes != 0 %}
+                  {{daybox.totalMinutes}}m
+                {% endif %} 
+
+                {% if daybox.totalHours + daybox.totalMinutes == 0 %} 
+                  0h
+                {% endif %}
+              </td>  
+          </tr>  
+          </table>
+          </div>
+        </div>
+      </div>  
+    </div>
+  {% endfor %}
 
 </div>
 

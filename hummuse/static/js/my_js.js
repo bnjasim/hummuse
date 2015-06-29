@@ -14,6 +14,18 @@ $(document).ready(function(){
 	}
 	*/
 
+	//--------------Projects--------------------//
+
+	// On submit disable the button-
+	// to prevent multiple submissions
+ 	$('#project-submit-button').on('click', function(){
+ 		$(this).prop('disabled', true);
+ 		$(this).closest('form')[0].submit();
+ 	})
+
+ 	//--------END of Projects---------------------//
+ 	
+
 //---------------------BEGIN TIMER----------------------------------//
 //-----------------------------------------------------------------//
 
@@ -114,11 +126,12 @@ $(document).ready(function(){
 //------------------------------------------------------------//
 //----------------END OF TIMER-------------------------------//
 
-
-	$('#leftpanel-add-event').on('click', function(){		
-	  $('#new-event-modal').modal('show');
-	  
-	});
+// --------Home Page -----------------------//
+	//-- Show full notes when clicked on ...(more) -->
+	$('a.show-more-notes').on('click', function(){
+		$(this).closest('.short-note').css("display", "none")
+		$(this).closest('.short-note').siblings('.full-note').css("display", "inline")
+	})
 
 	$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
@@ -305,6 +318,7 @@ $(document).ready(function(){
   //--------------------------------------------------//
   // For Work
   $('#form-work-submit').on('click', function(){
+  	$(this).prop('disabled', true); // disable the button
   	var form = $('#form-work')[0];
   	// Create hidden input fields corresponding to each button etc. in the form
   	// first field will indicate whether it's a work or an event
@@ -367,6 +381,7 @@ $(document).ready(function(){
 
   // For Event
   $('#form-event-submit').on('click', function(){
+  	$(this).prop('disabled', true); // disable the button
   	var form = $('#form-event')[0];
   	// Create hidden input fields corresponding to each button etc. in the form
   	// first field will indicate whether it's a work or an event

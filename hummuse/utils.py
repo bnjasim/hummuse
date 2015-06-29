@@ -1,8 +1,14 @@
 import re
 
+# used to convert javascript Date() to python datetime
 months ={'Jan':1, 'Feb':2, 'Mar':3, 'Apr':4, 'May':5, 'Jun':6,
 				'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12}
-	
+
+# used to find weekday()	
+weeks = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+months_array = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+				'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 def get_prev_date(curr_date):
 	# returns day and month of minus days before curr_date
 	#curr_date (day, month, year) format
@@ -75,5 +81,54 @@ def shorten_name(name):
 
 	return ucase(name[0:7])			
 
+def findFirstClose(note, open_tag, close_tag):
+	''' Returns the position of first unbalanced closing tag
+	'''		
+	start = 0
+	stack_count = 0
+	op_pos = note.find(open_tag, start)
+	cl_pos = note.find(close_tag, start)
+	if (op_pos < cl_pos and op_pos >= 0):
+		stack_count = 1
+		start = op_pos + len(open_tag)	
+	else:
+		stack_count = -1
+		start = cl_pos + len(close_tag)	
+
+	while(stack_count >= 0):
+		op_pos = note.find(open_tag, start)
+		cl_pos = note.find(close_tag, start)
+		if (op_pos < cl_pos and op_pos >= 0):
+			stack_count = +1
+			start = op_pos + len(open_tag)	
+		else:
+			stack_count += -1
+			start = cl_pos + len(close_tag)	
 		
+	return cl_pos # -1 if perfectly balanced
 			
+			
+def closeAllTags(remnote):
+	''' Returns  all unclosed tags in a note
+	the input is remaining notes after cut short
+	'''
+	unclosed_tags = '' # to return
+	#possible_open_tags = ['<div>', '<ul>', '<ol>', '<li>']
+	#possible_close_tags = ['</div>', '</ul>', '</ol>', '</li>']
+	tags_pair = {'<div>':'</div>', '<ul>':'</ul>', '<ol>':'</ol>', '<li>':'</li>'}
+
+	# just count if number of close tags is more 
+	# than the number of open tags in rem_note
+	# we assume that it can be more by at most 1 only 
+	# this assumption is reasonable in our application
+	first_closings = [findFirstClose(remnote, x, tags_pair[x]) for x in tags_pair.keys()]
+	tag_keys = tags_pair.keys()
+	while(max(first_closings) > 0):
+		min_pos = first_closings.index(min(filter(lambda x: x>0, first_closings)))
+		unclosed_tags += tags_pair[ tag_keys[min_pos] ]
+		first_closings[min_pos] = -1
+
+	return unclosed_tags
+
+
+

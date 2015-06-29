@@ -11,6 +11,7 @@ from google.appengine.api import users
 import logging
 import datetime
 import urllib
+import math
 
 import utils
 
@@ -44,10 +45,11 @@ class Projects(ndb.Model):
 	# Set Account as the parent of a Project
 	projectName = ndb.StringProperty(required = True)
 	projectDescription = ndb.TextProperty()
-	projectCreated = ndb.DateTimeProperty(auto_now_add = True)
+	projectCreated = ndb.DateProperty(auto_now_add = True)
 	projectActive = ndb.BooleanProperty(default = True)
 	projectShared = ndb.BooleanProperty(default = False)
-	projectPriority = ndb.FloatProperty(default = 1) # how recent
+	projectProductive = ndb.BooleanProperty(default = True)
+	#projectPriority = ndb.FloatProperty(default = 1) # got rid of this
 	# + how many times its used in the past
 	#projectColor = ndb.StringProperty(default = '#ffffff')
 
@@ -59,6 +61,8 @@ class Entry(ndb.Model):
 	notes = ndb.TextProperty()
 	tags = ndb.StringProperty(repeated = True)
 	project = ndb.KeyProperty(Projects)
+	projectName = ndb.StringProperty()
+	isWorkProductive = ndb.BooleanProperty()
 	hoursWorked = ndb.FloatProperty()
 	datakind = ndb.StringProperty(choices = ["work", "event"])
 
@@ -189,9 +193,8 @@ class MakeEntryHandler(Handler):
 			#tags = ndb.StringProperty(repeated = True)
 			#project = ndb.KeyProperty(Projects)
 			#hoursWorked = ndb.FloatProperty()
-			user = users.get_current_user()
 			user_ent_key = ndb.Key(Account, user.user_id())	
-
+			entry = {}
 			# date - a string of the format "Wed Jun 24 2015" - 15 characters
 			date = self.request.get('date') 
 			t = datetime.date.today()
@@ -202,11 +205,13 @@ class MakeEntryHandler(Handler):
 			
 			# IsAchievement
 			if(self.request.get('achievement') == 'true'):
-				achievement = True
+				isAchievement = True
 			else:
-				achievement = False	
+				isAchievement = False	
+			
 			# notes
 			notes = self.request.get('notes')
+	
 			#tags
 			# convert space seperated string to list of strings
 			#logging.error(self.request.get('tags'))
@@ -218,60 +223,36 @@ class MakeEntryHandler(Handler):
 				# project id
 				project = int( self.request.get('project') )
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
+				projectObject = projectKey.get()
+				projectName = projectObject.projectName;
+				isWorkProductive = projectObject.projectProductive
 				# working time
 				hours = int(self.request.get('hours')) + int(self.request.get('minutes'))/60.0
 
-				entry = Entry(parent = user_ent_key,
-							datakind = formkind,
-							project=projectKey, 
-							notes=notes,
-							date = ndb_date,	
-							hoursWorked = hours,
-							isAchievement = achievement,
-							tags = tags)
+				entry.update({'parent': user_ent_key,
+						 	'datakind': formkind,
+						 	'project': projectKey, 
+						 	'projectName': projectName,
+						 	'isWorkProductive': isWorkProductive,
+						 	'notes': notes,
+						 	'date':  ndb_date,	
+						 	'hoursWorked': hours,
+						 	'isAchievement': isAchievement,
+						  	'tags': tags 
+						 	  }) 
 
 			else:
-				entry = Entry(parent = user_ent_key,
-							datakind = formkind,
-							notes=notes,
-							date = ndb_date,	
-							isAchievement = achievement,
-							tags = tags
-							)
+				entry.update({'parent': user_ent_key,
+							'datakind': formkind,
+							'notes': notes,
+							'date': ndb_date,	
+							'isAchievement':  isAchievement,
+							'tags':  tags
+						  })	
 
-			entry.put()
-			self.redirect('/data')	
-
-
-class ListEntriesHandler(Handler):
-	
-	def get(self):
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
 			
-		else:
-			fresh_user = self.request.get('fresh_user')
-			message_new_user = ''
-			if fresh_user == 'True':
-				message_new_user = 'Thank you for Signing Up for Hummuse'
-
-			link_addprojects = '/project'
-			link_makeentry = '/entry'
-
-			logout = users.create_logout_url('/')
-			user = users.get_current_user()
-			user_ent_key = ndb.Key(Account, user.user_id())
-
-			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			all_entries = qry.fetch()	
-			self.render("entries_main_page.html",
-						 user_name = utils.shorten_name(user.nickname()), 
-					     logout_url = logout,
-					     link_addprojects = link_addprojects,
-					     link_makeentry = link_makeentry,
-						 entries = all_entries,
-						 message = message_new_user)
+			Entry(**entry).put()
+			self.redirect('/data')	
 
 
 # Registers new users in Account
@@ -293,6 +274,59 @@ class LoginHandler(webapp2.RequestHandler):
 			self.redirect('/?fresh_user=' + str(status))			
 		
 
+# A class to reformat the query results 
+# based on the date
+# used in the HomeHandler to display the entries
+class DaysBox:
+	def __init__(self, date):
+		self.dateString = date # eg. Sat Jun 27 2015
+		self.entries = []
+		self.totalHours = 0 # total productive work in a day
+		self.totalMinutes = 0
+
+		
+	def append(self, entry):
+		self.entries.append(entry)	
+
+# create a new Entry for calculations
+# such as hours and minutes from hoursWorked float property
+class EntryBox:
+	def __init__(self, e):
+		self.dateString = (utils.weeks[e.date.weekday()] + ' ' +
+						  utils.months_array[e.date.month-1] + '-' +
+						  str(e.date.day) + '-' + str(e.date.year) )
+
+		self.datakind = e.datakind
+		self.isAchievement = e.isAchievement
+		self.notes = e.notes
+		self.tags = e.tags
+		self.projectName = e.projectName
+		self.hoursWorked = e.hoursWorked 
+		if e.datakind == 'work':
+			self.hours = int( math.floor(e.hoursWorked) )
+			self.minutes = int( math.ceil( (e.hoursWorked - self.hours) * 60	) )
+		# If the note really large then we have to hide some parts
+		notes = self.notes
+		note_limit = 150 # show first 150 characters - but includes html tags aswell
+		isNotesLarge = len(notes) > note_limit
+		self.isNotesLarge = isNotesLarge
+		# if note is large find an appropriate place to wrap
+		# Find the next </div> or </li> in notes
+		if isNotesLarge:
+			rem_notes = notes[note_limit:]
+			min_div = rem_notes.find('</div>')
+			min_li = rem_notes.find('</li>')
+			pos = min(min_div, min_li)
+			len_tag = 5 if min_li < min_div else 6
+
+			notesCutShort = (notes[ : note_limit + pos] +
+							   '... <a class="show-more-notes">(more)</a>' +
+							   rem_notes[pos: pos+len_tag] +
+							   utils.closeAllTags(rem_notes[pos:])
+							  )
+			self.notesCutShort = notesCutShort
+			
+		
 
 class HomeHandler(Handler):
 	def get(self):
@@ -302,9 +336,36 @@ class HomeHandler(Handler):
 			
 		else:
 			logout_url = users.create_logout_url('/')
+			user_ent_key = ndb.Key(Account, user.user_id())
+
+			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
+			entries = qry.fetch(20); # first 10 entries 
+			# Need to restructure the query result by aggregating over the date 
+			entries_by_date = []
+			#t = datetime.date.today() # temporary date
+			#t = t.replace(day = 30, month = 12, year = 1970) # initialization
+			t = "Man Jal 40 2222" # of the form - Mon Jan 30 2012
+			daybox = DaysBox(t) # initialization - should avoid this, but don't know how
+			total_hours = 0 # total productive time in a day
+
+			for entry in entries:
+				entrybox = EntryBox(entry)
+				if entrybox.dateString != t:
+					daybox.totalHours = int( math.floor(total_hours) )
+					daybox.totalMinutes = int( math.ceil( (total_hours - daybox.totalHours) * 60))
+					total_hours = 0
+					t = entrybox.dateString # keep track of current entries' date
+					daybox = DaysBox(t) # create a new date box and put all relevant entries there
+					entries_by_date.append(daybox)
+				daybox.append(entrybox)
+				total_hours = total_hours + (entry.hoursWorked if entry.isWorkProductive and
+											 entry.datakind == 'work' else 0)
+
 			self.render('home.html',
 						 user_name = utils.shorten_name(user.nickname()), 
-						 logout_url = logout_url)
+						 logout_url = logout_url,
+						 entries_by_date = entries_by_date
+						 )
 
 
 class WelcomePageHandler(Handler):
@@ -317,8 +378,7 @@ app = webapp2.WSGIApplication([
     ('/delproject', DeleteProjectHandler),
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),
-    ('/welcome', WelcomePageHandler),
-    ('/list', ListEntriesHandler)
+    ('/welcome', WelcomePageHandler)
 ], debug=True)
 
 #@webapp_add_wsgi_middleware
