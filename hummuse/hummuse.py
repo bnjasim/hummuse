@@ -12,6 +12,7 @@ import logging
 import datetime
 import urllib
 import math
+import json
 
 import utils
 
@@ -288,6 +289,8 @@ class DaysBox:
 	def append(self, entry):
 		self.entries.append(entry)	
 
+
+
 # create a new Entry for calculations
 # such as hours and minutes from hoursWorked float property
 class EntryBox:
@@ -339,7 +342,7 @@ class HomeHandler(Handler):
 			user_ent_key = ndb.Key(Account, user.user_id())
 
 			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			entries = qry.fetch(20); # first 10 entries 
+			entries = qry.fetch(10); # first 10 entries 
 			# Need to restructure the query result by aggregating over the date 
 			entries_by_date = []
 			#t = datetime.date.today() # temporary date
@@ -367,6 +370,43 @@ class HomeHandler(Handler):
 						 entries_by_date = entries_by_date
 						 )
 
+class AjaxHomeHandler(Handler):
+
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			logout_url = users.create_logout_url('/')
+			user_ent_key = ndb.Key(Account, user.user_id())
+
+			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
+			entries = qry.fetch(20); # first 10 entries 
+			# Need to restructure the query result by aggregating over the date 
+			entries_by_date = []
+			#t = datetime.date.today() # temporary date
+			#t = t.replace(day = 30, month = 12, year = 1970) # initialization
+			t = "Mon Dbr 40 2222" # of the form - Mon Jan 30 2012
+			daybox = DaysBox(t) # contains entries of a day
+			total_hours = 0 # total productive time in a day
+
+			for entry in entries:
+				entrybox = EntryBox(entry)
+				if entrybox.dateString != t:
+					daybox.totalHours = int( math.floor(total_hours) )
+					daybox.totalMinutes = int( math.ceil( (total_hours - daybox.totalHours) * 60))
+					total_hours = 0
+					t = entrybox.dateString # keep track of current entries' date
+					daybox = DaysBox(t) # create a new date box and put all relevant entries there
+					entries_by_date.append(daybox)
+				daybox.append(entrybox)
+				total_hours = total_hours + (entry.hoursWorked if entry.isWorkProductive and
+											 entry.datakind == 'work' else 0)
+
+			self.render('ajaxhome.html',
+						 entries_by_date = entries_by_date
+						 )	
 
 class WelcomePageHandler(Handler):
 	def get(self):
@@ -378,8 +418,9 @@ app = webapp2.WSGIApplication([
     ('/delproject', DeleteProjectHandler),
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),
-    ('/welcome', WelcomePageHandler)
-], debug=True)
+    ('/welcome', WelcomePageHandler),
+    ('/ajaxhome', AjaxHomeHandler)
+   ], debug=True)
 
 #@webapp_add_wsgi_middleware
 #def main(app):

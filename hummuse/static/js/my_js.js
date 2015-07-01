@@ -13,6 +13,44 @@ $(document).ready(function(){
 		$.rta(); // rich text area
 	}
 	*/
+ //---------Home Initial data load------------------//
+ 	$.ajax({
+		url: '/ajaxhome',
+		type: 'GET',
+		dataType: 'html',
+		success: function(data){
+			$('.loading-gif').parent().prepend($(data));
+		},
+		error: function(e){
+			alert('Error' + e);
+		}
+	}); 
+
+	var ajax_not_fired = true;
+	$(window).scroll(function(){
+		if(ajax_not_fired){
+			if( $(window).height() + $(document).scrollTop() ===  $(document).height() ){
+				ajax_not_fired = false;
+				$('.loading-gif').css('display', 'block');
+
+				$.ajax({
+					url: '/ajaxjson',
+					type: 'GET',
+					dataType: 'json',
+					success: function(data){
+						$('.daily-box').last().after($('<div>', {text: data['name']}));
+						$('.loading-gif').css('display', 'none');
+					},
+					error: function(e){
+						alert('Error' + e);
+					}
+				});
+			}
+		}
+	})
+
+
+
 
 	//--------------Projects--------------------//
 
@@ -129,9 +167,11 @@ $(document).ready(function(){
 // --------Home Page -----------------------//
 	//-- Show full notes when clicked on ...(more) -->
 	$('a.show-more-notes').on('click', function(){
-		$(this).closest('.short-note').css("display", "none")
-		$(this).closest('.short-note').siblings('.full-note').css("display", "inline")
+		$(this).closest('.short-note').css("display", "none");
+		$(this).closest('.short-note').siblings('.full-note').css("display", "inline");
 	})
+
+
 
 	$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
@@ -195,7 +235,7 @@ $(document).ready(function(){
 
 
   // for changing text in dropdown button
-  // callback - should execute only after dates are set - not really important
+  // callback - should execute only after dates are set
   // but this should come only after setting dates in the form in data and event
   var set_listener = function(){
 

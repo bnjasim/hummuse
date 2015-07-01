@@ -1,0 +1,89 @@
+{% for daybox in entries_by_date %}
+    <div class='daily-box'>
+      <div class="date-box">
+        {{daybox.dateString}}
+      </div>  
+      <div class="row">
+        <div class="col-md-8 notes-area">
+        <ul>
+        {% for entry in daybox.entries %}
+          <li class="entry-box">
+            <div class="bullet-raja-pencil"> 
+              {% if entry.datakind == 'work' %}            
+                <span class="glyphicon glyphicon-pencil"></span>
+              {% else %}
+                <span class="glyphicon glyphicon-paperclip"></span>
+              {% endif %}  
+            </div>
+
+            {% if entry.datakind == 'work' %}
+              <div class="entry-box-title">{{ entry.projectName }}</div>:
+            {% endif %}  
+
+            {% if entry.notes == '' %}
+              <i style="font-style:15px;">No notes</i>
+            {% else %}
+              {% if entry.isNotesLarge %}  
+    	          <span class="short-note">{{ entry.notesCutShort | safe }}</span>
+                <span class="full-note">{{ entry.notes | safe }}</span>
+              {% else %}  
+                {{ entry.notes | safe }}
+              {% endif %}  
+            {% endif %}
+            
+            <div class="tags-box">
+              {% for tag in entry.tags %}
+              <div class="tags-added">
+                {{ tag }}
+              </div>
+              {% endfor %}
+            </div>  
+          </li>  
+        {% endfor %}  
+        </ul>
+        </div>	
+
+        <div class="col-md-4">
+          <div class="container-div-for-table">
+          <table class="work-hour-table">
+          {% for entry in daybox.entries if entry.datakind == 'work' %}
+            <tr>
+              <td class="first-column">
+                <b>{{ entry.projectName }}</b>:
+              </td>
+
+              <td class="second-column">
+                {% if entry.hours != 0 %}
+                  {{entry.hours}}h 
+                {% endif %}  
+
+                {% if entry.minutes != 0 %}
+                  {{entry.minutes}}m
+                {% endif %}  
+              </td>  
+            </tr>  
+          {% endfor %}
+          <tr>
+            <td class="first-column">
+                <b>Total</b>:
+              </td>
+              <td class="second-column">
+                {% if daybox.totalHours != 0 %}
+                  {{daybox.totalHours}}h 
+                {% endif %}  
+
+                {% if daybox.totalMinutes != 0 %}
+                  {{daybox.totalMinutes}}m
+                {% endif %} 
+
+                {% if daybox.totalHours + daybox.totalMinutes == 0 %} 
+                  0h
+                {% endif %}
+              </td>  
+          </tr>  
+          </table>
+          </div>
+        </div>
+      </div>  
+    </div>
+  {% endfor %}
