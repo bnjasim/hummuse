@@ -1,0 +1,93 @@
+<div class='daily-box'>
+    <div class="date-box">
+        {{date}}
+    </div> 
+
+    <div class="row">
+      <div class="col-md-8 notes-area">
+        <ul>
+        {{#entries}}
+          <li class="entry-box">
+            <div class="bullet-raja-pencil"> 
+              {{#isWork}}            
+                <span class="glyphicon glyphicon-pencil"></span>
+              {{/isWork}}  
+              {{^isWork}}
+                <span class="glyphicon glyphicon-paperclip"></span>
+              {{/isWork}}
+            </div>
+            {{#isWork}}            
+                <div class="entry-box-title">{{proj}}</div>:
+            {{/isWork}}  
+
+            {{^notes}}
+              <i style="font-style:15px;">No notes</i>
+            {{/notes}}  
+
+            {{#isnbig}}  
+                <span class="short-note">{{{shortnotes}}}</span>
+                <span class="full-note">{{{notes}}}</span>
+            {{/isnbig}}  
+
+            {{^isnbig}}  
+            	{{{notes}}}
+            {{/isnbig}}	
+
+            <div class="tags-box">
+            {{#tags}}
+              <div class="tags-added">
+                {{.}}
+              </div>
+            {{/tags}}
+            </div>  
+            
+          </li>  
+        {{/entries}}  
+        </ul>  
+      </div>
+
+      <div class="col-md-4">
+        <div class="container-div-for-table">
+          <table class="work-hour-table">
+          {{#entries}}
+           {{#isWork}}
+            <tr>
+              <td class="first-column">
+                <b>{{proj}}</b>:
+              </td>
+
+              <td class="second-column">
+              	{{^ishz}}
+              	  {{h}}h &nbsp;
+              	{{/ishz}}
+              	{{^ismz}}
+				  {{m}}m
+				{{/ismz}}  
+              </td>  
+            </tr>  
+           {{/isWork}}  
+          {{/entries}}
+
+          {{^totalnone}}
+          <tr>
+            <td class="first-column">
+                <b>Total</b>:
+              </td>
+              <td class="second-column">
+                {{#totalh}}
+                  {{totalh}}h &nbsp;
+                {{/totalh}}  
+
+                {{#totalm}}
+                  {{totalm}}m
+                {{/totalm}}  
+                
+              </td>  
+          </tr>
+          {{/totalnone}}  
+          </table>
+        </div>
+      </div>  
+    </div>    
+ 
+</div>

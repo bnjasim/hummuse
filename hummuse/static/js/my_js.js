@@ -1,32 +1,215 @@
 $(document).ready(function(){
 	//window.onbeforeunload = function(){
-	//	if(timer_active && disallow_move_away){
-  	//	  return "Timer running!";
-  	//	}
-  	//	else return null;
-	//}
 
-	/* Deprecated Code for rta
-	path = window.location.href; // current page
-	loc = path.substring(path.lastIndexOf('/')+1);
-	if(loc.substring(0, loc.indexOf('.')) == "data"){
-		$.rta(); // rich text area
-	}
-	*/
+
  //---------Home Initial data load------------------//
- 	$.ajax({
-		url: '/ajaxhome',
-		type: 'GET',
-		dataType: 'html',
-		success: function(data){
-			$('.loading-gif').parent().prepend($(data));
-		},
-		error: function(e){
-			alert('Error' + e);
-		}
-	}); 
+ /*---------We receive json data from the server
+  the  rendering of daily-box div is done in the client side*/
+  jsdata = {}; // json/js data stored globally and later on added to it
 
-	var ajax_not_fired = true;
+  // function to extract sentences out of html (string)
+  // similar to innertextcontent() function
+  var innerSentences = function(html_string){
+  	var match, 
+  		sentences = [],
+  		last_tag_pos = 0,
+  		now_tag_pos = 0;
+  	var regex = /\<\/*(?:div|li|ul|ol|b|u|i|span style\=\"\")\>/g ; // regular expression
+  	while(match = regex.exec(html_string)){
+  		now_tag_pos = match.index;
+  		if (now_tag_pos > last_tag_pos){
+  			var s = html_string.slice(last_tag_pos, now_tag_pos);
+  			sentences.push(s);
+  		}
+  		last_tag_pos = now_tag_pos + match[0].length;
+  	}
+  	return sentences;
+  }
+
+  // input is an html string
+  var formShortNotes = function(html_string, note_limit){
+  	 var sentences = innerSentences(html_string),
+  	     words_count = 0,
+  	     short_sentence = '';
+
+  	 for(var i=0; i<sentences.length; ++i){
+  	 	var s = sentences[i],
+  	 		words = s.split(/[.\s]/);
+
+  	 	words_count += words.length;
+  	 	if(words_count > note_limit)
+  	 		break;
+  	 	else if (s.length > 0){
+  	 		var stop = '';
+  	 		if (s[s.length-1] != '.')
+  	 			stop = '.';
+  	 		short_sentence += s + stop + ' ';
+  	 	}
+  	 		
+  	 }
+  	 return short_sentence + '..<a class="show-more-notes">(more)</a>';
+  }
+
+
+  	var finished_load = function(){
+  		if ($('.loading-gif'))
+  			$('.loading-gif').remove();
+
+
+  		if($('.div-load-more')){
+  			var a = $('.div-load-more').children();
+  			a.text('Done!');
+  			a.css('color', '#777');
+  			a.css('text-decoration', 'none');
+  		}
+  	}
+
+  	var render_content = function(offset){
+  		// First remove loading gif from the DOM
+  		var lg = $('.loading-gif').remove(); // later add at the bottom
+  		var div_more = $('.div-load-more').remove(); // later add at the bottom
+  		//$('.loading-gif').parent().prepend(JSON.stringify(data));
+  		// Convert json data into javascript object - no need it seems
+  		//jsdata = JSON.parse(data); //[{"data": date, "entries":[....]}, {} ...]
+  		var data = jsdata['data']; // array of dayboxes
+  		
+
+  		$.get('static/templates/test.html', function(template) {
+  			// render each daily-box separately
+  			for(var i=offset; i<data.length; ++i){
+  				var daybox = data[i]; // we are rendering this json/js data structure
+  				// reformat to compute total hours, shortnotes etc.
+  				var total = 0;
+  				var entries = daybox.entries;
+  				for(var j=0; j<entries.length; ++j){
+  					entry = entries[j];
+  					// add hrs to total only if project productive
+  					// isproductive automatically implies isWork
+  					if(entry['isWork']) // important**** change to isproductive
+  						total += entry['hrs'];
+
+  					var hrs = entry['hrs'],
+  						h = Math.floor(hrs),
+						m = Math.ceil((hrs - h) * 60);
+					entry['h'] = h;
+					entry['ishz'] = (h === 0);
+					entry['m'] = m;
+					entry['ismz'] = (m === 0);
+
+					var notes = entry['notes'],
+						note_word_limit = 30, // first 30 words
+						note_char_limit = 120,
+						isnotebig = notes.length > note_char_limit;
+
+					entry['isnbig'] = isnotebig;
+
+					if (isnotebig) 
+						entry['shortnotes'] = formShortNotes(notes, note_word_limit);
+
+  				}
+
+  				var totalh = Math.floor(total),
+  					totalm = Math.ceil((total - totalh)*60);
+  				if(totalh > 0)
+  					daybox['totalh'] = totalh;
+  				if(totalm > 0)
+  					daybox['totalm'] = totalm;
+  				// don't display 'Total' if
+  				if(totalh==0 && totalm==0)
+  					daybox['totalnone'] = true;
+
+
+  				var rendered = Mustache.render(template, daybox);
+  				// attach to the DOM
+  				$('#json-div').append(rendered);
+  			}
+
+
+
+  			//$('.daily-box').last().after(lg);
+  			//-- Show full notes when clicked on ...(more) -->
+			$('a.show-more-notes').on('click', function(){
+				$(this).closest('.short-note').css("display", "none");
+				$(this).closest('.short-note').siblings('.full-note').css("display", "inline");
+			});
+
+			// Append Load more button/anchor
+  			$('#json-div').append(div_more);
+  			div_more.css('visibility', 'visible');
+
+  			if (jsdata['more']) {
+
+				$('a.load-more-click').on('click', function(){
+					$('.div-load-more').css('visibility', 'hidden');
+					$('#json-div').append(lg);
+					make_ajax_call();
+
+				});
+			}
+			else 
+				finished_load();
+
+		});
+	}
+
+ 	var append_data_and_render = function(received_data){
+ 		// jsdata is the available global data
+ 		var offset = 0;
+ 		var data_new = received_data['data'],
+ 				data_old = jsdata['data'];
+
+ 		if (data_new.length === 0){
+ 			finished_load();
+ 			return;
+ 		}	
+
+ 		if (data_old === undefined) // initial load
+ 			jsdata = received_data;
+
+ 		else {
+
+ 			jsdata.more = received_data.more;
+ 			jsdata.cursor = received_data.cursor;
+ 			
+ 			if (data_new[0]['date'] !== data_old[data_old.length-1]['date']){
+ 				// no overlap - just append and call render
+ 				jsdata.data = data_old.concat(data_new);
+ 				offset = data_old.length;
+ 			}	
+
+ 			else {
+ 				// more difficult - because we have to merge two boxes 
+ 				// which happen to have the same date
+ 				data_old.concat(data_new);
+ 				offset = data_old_last_box + 1;
+
+ 			}
+
+ 		}
+
+
+ 		render_content(offset);
+ 	}
+
+	var make_ajax_call = function(){
+		$.ajax({
+			url: '/ajaxhome',
+			type: 'GET',
+			data: {'cursor':jsdata['cursor']},
+			dataType: 'json',
+			success: function(received_data){
+				append_data_and_render(received_data);
+			},
+			error: function(e){
+				alert('Error' + e);
+			}
+		}); 
+	}
+
+	// Initial data load - non-blocking ajax (asynchronous)
+	make_ajax_call();
+
+/*	var ajax_not_fired = true;
 	$(window).scroll(function(){
 		if(ajax_not_fired){
 			if( $(window).height() + $(document).scrollTop() ===  $(document).height() ){
@@ -47,8 +230,8 @@ $(document).ready(function(){
 				});
 			}
 		}
-	})
-
+	});
+*/
 
 
 
@@ -59,7 +242,7 @@ $(document).ready(function(){
  	$('#project-submit-button').on('click', function(){
  		$(this).prop('disabled', true);
  		$(this).closest('form')[0].submit();
- 	})
+ 	});
 
  	//--------END of Projects---------------------//
  	
@@ -165,13 +348,6 @@ $(document).ready(function(){
 //----------------END OF TIMER-------------------------------//
 
 // --------Home Page -----------------------//
-	//-- Show full notes when clicked on ...(more) -->
-	$('a.show-more-notes').on('click', function(){
-		$(this).closest('.short-note').css("display", "none");
-		$(this).closest('.short-note').siblings('.full-note').css("display", "inline");
-	})
-
-
 
 	$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
@@ -218,7 +394,7 @@ $(document).ready(function(){
     $('#date-form-button')[0].innerText = date.toDateString() + ' - Today';
     $('#date-form-button-event')[0].innerText = date.toDateString() + ' - Today';
 
-    for(var j=0; j<8; ++j){
+    for(var j=0; j<38; ++j){
   	  var temp_li = document.createElement("li");
   	  var temp_a = document.createElement("a");
   	  temp_a.textContent = date.toDateString(); // Wed Jun 24 2015 format

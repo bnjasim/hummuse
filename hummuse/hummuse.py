@@ -8,6 +8,7 @@ import os
 import jinja2
 from google.appengine.ext import ndb
 from google.appengine.api import users
+from google.appengine.datastore.datastore_query import Cursor
 import logging
 import datetime
 import urllib
@@ -275,19 +276,17 @@ class LoginHandler(webapp2.RequestHandler):
 			self.redirect('/?fresh_user=' + str(status))			
 		
 
-# A class to reformat the query results 
-# based on the date
-# used in the HomeHandler to display the entries
-class DaysBox:
-	def __init__(self, date):
-		self.dateString = date # eg. Sat Jun 27 2015
-		self.entries = []
-		self.totalHours = 0 # total productive work in a day
-		self.totalMinutes = 0
 
+# function returns a python dictionary- 
+# representation of an entry object
+def make_entry_dict(e):
+
+	dateString = utils.date_string(e.date)
+
+	return {'isWork': e.datakind == 'work', 'date': dateString, 'isachiev': e.isAchievement,
+			'notes': e.notes, 'tags': e.tags, 'proj': e.projectName, 'hrs': e.hoursWorked,
+			'isproductive': e.isWorkProductive};
 		
-	def append(self, entry):
-		self.entries.append(entry)	
 
 
 
@@ -340,34 +339,10 @@ class HomeHandler(Handler):
 		else:
 			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())
-
-			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			entries = qry.fetch(10); # first 10 entries 
-			# Need to restructure the query result by aggregating over the date 
-			entries_by_date = []
-			#t = datetime.date.today() # temporary date
-			#t = t.replace(day = 30, month = 12, year = 1970) # initialization
-			t = "Man Jal 40 2222" # of the form - Mon Jan 30 2012
-			daybox = DaysBox(t) # initialization - should avoid this, but don't know how
-			total_hours = 0 # total productive time in a day
-
-			for entry in entries:
-				entrybox = EntryBox(entry)
-				if entrybox.dateString != t:
-					daybox.totalHours = int( math.floor(total_hours) )
-					daybox.totalMinutes = int( math.ceil( (total_hours - daybox.totalHours) * 60))
-					total_hours = 0
-					t = entrybox.dateString # keep track of current entries' date
-					daybox = DaysBox(t) # create a new date box and put all relevant entries there
-					entries_by_date.append(daybox)
-				daybox.append(entrybox)
-				total_hours = total_hours + (entry.hoursWorked if entry.isWorkProductive and
-											 entry.datakind == 'work' else 0)
-
+			# All the data rendering is now done by AjaxHomeHandler
 			self.render('home.html',
 						 user_name = utils.shorten_name(user.nickname()), 
-						 logout_url = logout_url,
-						 entries_by_date = entries_by_date
+						 logout_url = logout_url
 						 )
 
 class AjaxHomeHandler(Handler):
@@ -381,32 +356,29 @@ class AjaxHomeHandler(Handler):
 			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())
 
+			cursor = Cursor(urlsafe = self.request.get('cursor', default_value=None))
+			logging.error(self.request.get('cursor', default_value=None))
 			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			entries = qry.fetch(20); # first 10 entries 
+			entries, next_cursor, more = qry.fetch_page(20, start_cursor=cursor); 
 			# Need to restructure the query result by aggregating over the date 
-			entries_by_date = []
-			#t = datetime.date.today() # temporary date
+			entries_by_date = [] # top level of json to return
+			#t = datetime.date.today() # Sorry! datetime is not json serializable
 			#t = t.replace(day = 30, month = 12, year = 1970) # initialization
-			t = "Mon Dbr 40 2222" # of the form - Mon Jan 30 2012
-			daybox = DaysBox(t) # contains entries of a day
-			total_hours = 0 # total productive time in a day
-
+			t = 'Mon Jun 31 2026' # incorrect date but in correct format
+			todays_entries = [] # contains entries of a day
+			
 			for entry in entries:
-				entrybox = EntryBox(entry)
-				if entrybox.dateString != t:
-					daybox.totalHours = int( math.floor(total_hours) )
-					daybox.totalMinutes = int( math.ceil( (total_hours - daybox.totalHours) * 60))
-					total_hours = 0
-					t = entrybox.dateString # keep track of current entries' date
-					daybox = DaysBox(t) # create a new date box and put all relevant entries there
+				entrydict = make_entry_dict(entry)
+				if utils.date_string(entry.date) != t:
+					t = utils.date_string(entry.date) # keep track of current entries' date
+					todays_entries = []
+					daybox = {'date': t, 'entries': todays_entries} # create a new date box and put all relevant entries there
 					entries_by_date.append(daybox)
-				daybox.append(entrybox)
-				total_hours = total_hours + (entry.hoursWorked if entry.isWorkProductive and
-											 entry.datakind == 'work' else 0)
 
-			self.render('ajaxhome.html',
-						 entries_by_date = entries_by_date
-						 )	
+				todays_entries.append(entrydict)
+			
+			whole_data = {"data": entries_by_date, "cursor": next_cursor.urlsafe(), "more": more}
+			self.response.out.write(json.dumps(whole_data))	
 
 class WelcomePageHandler(Handler):
 	def get(self):

@@ -9,6 +9,12 @@ weeks = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 months_array = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 				'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+def date_string(date):
+	return (weeks[date.weekday()] + ' ' +
+			months_array[date.month-1] + '-' +
+			str(date.day) + '-' + str(date.year) )
+
+
 def get_prev_date(curr_date):
 	# returns day and month of minus days before curr_date
 	#curr_date (day, month, year) format
@@ -99,7 +105,7 @@ def findFirstClose(note, open_tag, close_tag):
 		op_pos = note.find(open_tag, start)
 		cl_pos = note.find(close_tag, start)
 		if (op_pos < cl_pos and op_pos >= 0):
-			stack_count = +1
+			stack_count += 1
 			start = op_pos + len(open_tag)	
 		else:
 			stack_count += -1

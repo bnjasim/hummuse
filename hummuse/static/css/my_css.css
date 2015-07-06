@@ -383,8 +383,16 @@ body{
   margin: 0 auto;
   width: 100px;
   height: 50px;
-  margin-top: 20px;
-  display: none;
+  margin-top: 10px;
+  display: block;
+}
+
+.div-load-more{
+  height: 60px;
+  width: 66%;
+  text-align: center;
+  visibility: hidden;
+  margin-top: 2px;
 }
 
 
