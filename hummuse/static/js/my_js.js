@@ -6,6 +6,11 @@ $(document).ready(function(){
  /*---------We receive json data from the server
   the  rendering of daily-box div is done in the client side*/
   jsdata = {}; // json/js data stored globally and later on added to it
+  weeks_loaded = 0; // how many weeks have already been rendered 
+  var template = $('#template').html();
+  var mainContentDiv = $('#json-div');
+  // summary state can be changed to weekly and back to daily
+  var summary_state = 'daily';
 
   // function to extract sentences out of html (string)
   // similar to innertextcontent() function
@@ -52,37 +57,222 @@ $(document).ready(function(){
 
 
   	var finished_load = function(){
-  		if ($('.loading-gif'))
-  			$('.loading-gif').remove();
 
-
-  		if($('.div-load-more')){
-  			var a = $('.div-load-more').children();
+  		if($('#div-load-more')){
+  			var a = $('#div-load-more').children();
   			a.text('Done!');
   			a.css('color', '#777');
   			a.css('text-decoration', 'none');
   		}
   	}
 
+  	// extract relevant portions of a note to make summary
+  	// for the timebeing, just take the first sentence.
+  	var findSummaryFromNotes = function(note){
+  		var regex = /\<\/*(?:div|li|ul|ol|b|u|i|br\/|br|\.|span style\=\"\")\>/;
+  		var pos = note.search(regex);
+  		var summary = note.slice(0,pos);
+  		return summary;
+  	}
+
+  	// function to combine a week long data into a weekbox similar in structure to a daybox
+  	// called from reformat_data_to_weekly() function
+  	// a weekbox [{date:date, project:hummuse, notes:notes...}, {date:date, project:datascience,},{}..]
+  	var mashup_week_projects = function(temp_week){
+  		// temp_week is an array of dayboxes
+  		var weekentries = []; // to return
+  		var hashproj = {};
+
+  		// 1 pass to group entries by projects
+  		for (var i=0; i<temp_week.length; ++i){
+  			var d = temp_week[i]; // just one day in the week
+  			var dentries = d.entries; // an array with uique projects and events
+  			for (var j=0; j<dentries.length; ++j){
+  				var e = dentries[j];
+  				if (hashproj[e.proj])
+  					hashproj[e.proj] = hashproj[e.proj].concat(e);
+  				else if(e.proj)
+  					hashproj[e.proj] = [e];
+  				else if(hashproj['events'])
+  					hashproj['events'] = hashproj['events'].concat(e);
+  				else
+  					hashproj['events'] = [e];
+  			}
+  		}
+  		// 2nd pass over hashproj to create summary over projects
+		$.each(hashproj, function(key_proj, value_entries){
+			var work_or_event_mashed_entry = {},
+				totalh = 0,
+  				combinedNotes = '',
+  				shortnotes = '',
+  				combinedTags = [];
+  				combinedTagsLower = []; // just to compare
+
+			if(key_proj !== 'events'){
+
+  				var entry = {};
+
+  				for (var i=0; i<value_entries.length; ++i){
+
+  					entry = value_entries[i];
+  					totalh += entry['hrs'];
+  					
+					// combine tags & avoid repitions
+  					var tags = entry['tags'];
+  					
+  					// if tags = [""] then don't concat
+  					for(var j=0; j<tags.length; ++j) {
+  						var t = tags[j],
+  							t_lower = t.replace(/ /g, '').toLowerCase();
+  						// t_lower not present	
+  						if (t != "" && combinedTagsLower.indexOf(t_lower) === -1){
+  							combinedTags.push(t);	
+  							combinedTagsLower.push(t_lower);
+  						}
+  					}
+
+  					var notes = entry['notes'];
+  					shortnotes += findSummaryFromNotes(notes) + '<br/>';
+  					combinedNotes += '<br/>' + entry['date']+':' + notes;
+  				
+  				}
+
+  				shortnotes = shortnotes.slice(0,-5); // get ridoff last br
+  				shortnotes += '..<a class="show-more-notes">(more)</a>';
+
+  				work_or_event_mashed_entry['isWork'] = true;
+  				work_or_event_mashed_entry['notes'] = combinedNotes;
+  				work_or_event_mashed_entry['isnotebig'] = true;
+  				work_or_event_mashed_entry['shortnotes'] = shortnotes;
+  				work_or_event_mashed_entry['tags'] = combinedTags;
+  				work_or_event_mashed_entry['proj'] = key_proj;
+  				work_or_event_mashed_entry['hrs'] = totalh;
+  				work_or_event_mashed_entry['isproductive'] = entry['isproductive'];
+  			}
+
+  			else { // an event
+
+  				for (var i=0; i<value_entries.length; ++i){
+
+  					var entry = value_entries[i];
+
+  					// combine tags & avoid repitions
+  					var tags = entry['tags'];
+  					
+  					// if tags = [""] then don't concat
+  					for(var j=0; j<tags.length; ++j) {
+  						var t = tags[j],
+  							t_lower = t.replace(/ /g, '').toLowerCase();
+  						// t_lower not present	
+  						if (t != "" && combinedTagsLower.indexOf(t_lower) === -1){
+  							combinedTags.push(t);	
+  							combinedTagsLower.push(t_lower);
+  						}
+  					}
+
+					var notes = entry['notes'];
+  					shortnotes += findSummaryFromNotes(notes) + '<br/>';
+  					combinedNotes += entry['date']+':' + notes + '<br/>';
+  				}
+
+  				shortnotes += '..<a style="position:relative; left:80%;" class="show-more-notes">(more)</a>';
+
+  				work_or_event_mashed_entry['isWork'] = false;
+  				work_or_event_mashed_entry['notes'] = combinedNotes;
+  				work_or_event_mashed_entry['isnotebig'] = true;
+  				work_or_event_mashed_entry['shortnotes'] = shortnotes;
+  				work_or_event_mashed_entry['tags'] = combinedTags;
+
+  			}
+
+  			weekentries.push(work_or_event_mashed_entry);
+
+  		});
+		
+		return weekentries;
+
+  	}
+
+  	// we want a week to start from Mon
+	Date.prototype.getMyDay  = function(){var a = this.getDay() - 1; if (a<0){a=6}; return a}
+
+  	var reforamt_data_to_weekly = function(data){
+  		// weekly_data should be an array of dayboxes
+  		var weekly_data = [];
+  		// a week is from Mon to Sun
+  		
+  		var temp_week = [data[0]],
+  			temp_date = new Date(data[0]['date']),
+  			week_start_date = new Date(data[0]['date']),
+  			week_end_date = new Date(data[0]['date']);
+
+  		week_start_date.setDate(week_start_date.getDate() - week_start_date.getMyDay());
+  	    week_end_date.setDate(week_end_date.getDate() + 6 - week_end_date.getMyDay());
+  	    
+  	    var weekbox = {};
+  	    weekbox['date'] = week_start_date.toDateString();
+  	    weekbox['enddate'] = week_end_date.toDateString();
+  	    
+  	    weekly_data.push(weekbox);
+
+  	    for (var i=1; i<data.length; ++i){
+  	    	temp_date = new Date(data[i]['date']);
+
+  	    	if (temp_date >= week_start_date)
+  	    		// in the same week - prepend - unshift
+  	    		temp_week.unshift(data[i]);
+
+  	    	else {
+  	    		// finish the previous weekbox
+  	    		weekbox['entries'] = mashup_week_projects(temp_week);
+
+  	    		temp_week = [data[i]];
+  	    		weekbox = {};
+
+  	    		week_start_date = new Date(data[i]['date']),
+  				week_end_date = new Date(data[i]['date']);
+  				week_start_date.setDate(week_start_date.getDate() - week_start_date.getMyDay());
+  	    		week_end_date.setDate(week_end_date.getDate() + 6 - week_end_date.getMyDay());
+
+  	    		weekbox['date'] = week_start_date.toDateString();
+  	    		weekbox['enddate'] = week_end_date.toDateString();
+  	    		
+  	    		weekly_data.push(weekbox);
+
+  	    	}
+  	    // finally add last one
+		weekbox['entries'] = mashup_week_projects(temp_week);
+  	    		
+  	    }
+  		
+  		return weekly_data;
+  	}
+
+
   	var render_content = function(offset){
-  		// First remove loading gif from the DOM
-  		var lg = $('.loading-gif').remove(); // later add at the bottom
-  		var div_more = $('.div-load-more').remove(); // later add at the bottom
-  		//$('.loading-gif').parent().prepend(JSON.stringify(data));
-  		// Convert json data into javascript object - no need it seems
-  		//jsdata = JSON.parse(data); //[{"data": date, "entries":[....]}, {} ...]
+  		//jsdata = JSON.parse(data); //[{"data": [{"date":date, "entries":[....]}, {} ...]
   		var data = jsdata['data']; // array of dayboxes
   		
+  		  	// if weekly, reformat the data to have new dailyboxes 
+  			// (actually weeklyboxes) but we will call dailybox itself
+  			var formatted_data = data;
+  			if (summary_state === 'weekly') {
+  				formatted_data = reforamt_data_to_weekly(data);
+  				weeks_loaded = formatted_data.length;
+  			}
 
-  		$.get('static/templates/test.html', function(template) {
-  			// render each daily-box separately
-  			for(var i=offset; i<data.length; ++i){
-  				var daybox = data[i]; // we are rendering this json/js data structure
+  			for(var i=offset; i<formatted_data.length; ++i){
+  				var daybox = formatted_data[i]; // we are rendering this json/js data structure
   				// reformat to compute total hours, shortnotes etc.
   				var total = 0;
   				var entries = daybox.entries;
   				for(var j=0; j<entries.length; ++j){
-  					entry = entries[j];
+  					var entry = entries[j];
+  					// if tags is [''] need to change to []
+  					var t = entry.tags;
+  					if (t.length === 1 && t[0] === "")
+  						entry.tags = [];
+
   					// add hrs to total only if project productive
   					// isproductive automatically implies isWork
   					if(entry['isWork']) // important**** change to isproductive
@@ -99,11 +289,15 @@ $(document).ready(function(){
 					var notes = entry['notes'],
 						note_word_limit = 30, // first 30 words
 						note_char_limit = 120,
+						isnotebig = true;
+
+					if (!entry['shortnotes'])	
 						isnotebig = notes.length > note_char_limit;
 
+					
 					entry['isnbig'] = isnotebig;
 
-					if (isnotebig) 
+					if (isnotebig && !entry['shortnotes']) 
 						entry['shortnotes'] = formShortNotes(notes, note_word_limit);
 
   				}
@@ -121,35 +315,48 @@ $(document).ready(function(){
 
   				var rendered = Mustache.render(template, daybox);
   				// attach to the DOM
-  				$('#json-div').append(rendered);
+  				// insert to the daily-box empty-box for smooth loading without jumps
+  				mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
+  				mainContentDiv.append('<div class="empty-box"></div>');
+
   			}
 
 
-
-  			//$('.daily-box').last().after(lg);
-  			//-- Show full notes when clicked on ...(more) -->
 			$('a.show-more-notes').on('click', function(){
 				$(this).closest('.short-note').css("display", "none");
 				$(this).closest('.short-note').siblings('.full-note').css("display", "inline");
 			});
 
-			// Append Load more button/anchor
-  			$('#json-div').append(div_more);
-  			div_more.css('visibility', 'visible');
-
+			mainContentDiv.find('.empty-box').html('<div id="div-load-more"></div>');
+			$('#div-load-more').append('<a class="load-more-click">Load >></a>');
+			
   			if (jsdata['more']) {
-
-				$('a.load-more-click').on('click', function(){
-					$('.div-load-more').css('visibility', 'hidden');
-					$('#json-div').append(lg);
+  				
+  				$('a.load-more-click').on('click', function(){
+  					// empty and append = html
+					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
 					make_ajax_call();
-
 				});
 			}
 			else 
 				finished_load();
 
-		});
+	
+	}
+
+	// date1 - 'Jul 6 2015' date2 - 'Jul 12 2015' return true
+	var in_the_same_week = function(date1, date2){
+		var week_start_date = new Date(date1),
+  			week_end_date = new Date(date1),
+  			date2Date = new Date(date2);
+
+  		week_start_date.setDate(week_start_date.getDate() - week_start_date.getMyDay());
+  	    week_end_date.setDate(week_end_date.getDate() + 6 - week_end_date.getMyDay());
+
+  	    if (date2Date <= week_end_date && date2Date >= week_start_date)
+  	    	return true;
+  	    else
+  	    	return false;
 	}
 
  	var append_data_and_render = function(received_data){
@@ -163,25 +370,64 @@ $(document).ready(function(){
  			return;
  		}	
 
- 		if (data_old === undefined) // initial load
+ 		if (data_old === undefined) {// initial load
  			jsdata = received_data;
+ 			$('.initial-loading-container').remove();
+ 		}
 
  		else {
 
  			jsdata.more = received_data.more;
  			jsdata.cursor = received_data.cursor;
  			
- 			if (data_new[0]['date'] !== data_old[data_old.length-1]['date']){
- 				// no overlap - just append and call render
+ 			var date1 = data_old[data_old.length-1]['date'],
+ 				date2 = data_new[0]['date'];
+
+ 			if (date1 !== date2){
+ 				// no overlap - just append 
  				jsdata.data = data_old.concat(data_new);
- 				offset = data_old.length;
+
+ 				if (summary_state === 'daily')
+ 					offset = data_old.length;
+
+ 				else if (summary_state === 'weekly'){
+ 					// if in the same week, more complex
+ 					if (in_the_same_week(date1, date2)){
+ 						if (weeks_loaded > 0)
+ 							offset = weeks_loaded - 1;
+ 						// remove the last weekly-box
+ 						$('.daily-box').last().remove();
+ 					}
+ 					else {
+ 						offset = weeks_loaded;
+ 					}
+ 				}
+
  			}	
 
  			else {
+ 				// merge date-boxes
  				// more difficult - because we have to merge two boxes 
- 				// which happen to have the same date
- 				data_old.concat(data_new);
- 				offset = data_old_last_box + 1;
+ 				var last_date_box = data_old[data_old.length-1]['entries'];
+ 				var first_date_box = data_new[0]['entries'];
+ 				var combined_date_box = last_date_box.concat(first_date_box);
+ 				// now replace the last daybox of jsdata with the combined date-box
+ 				jsdata.data[data_old.length-1]['entries'] = combined_date_box;
+ 				// then append the received data to jsdata except for the first day-box
+ 				jsdata.data = jsdata.data.concat(data_new.slice(1));
+
+ 				if (summary_state === 'daily'){
+ 					// remove the last daily-box from the DOM
+ 					$('.daily-box').last().remove();
+ 					offset = data_old.length - 1;
+ 				}
+
+ 				else if (summary_state === 'weekly'){
+ 					// just remove last weeklybox and re-render
+ 					$('.daily-box').last().remove();
+ 					if (weeks_loaded > 0)
+ 						offset = weeks_loaded - 1;
+ 				}
 
  			}
 
@@ -206,8 +452,10 @@ $(document).ready(function(){
 		}); 
 	}
 
-	// Initial data load - non-blocking ajax (asynchronous)
-	make_ajax_call();
+    // make ajax call only from home page
+    if (mainContentDiv.length > 0) // if $(#json-div) is present
+		make_ajax_call();
+	
 
 /*	var ajax_not_fired = true;
 	$(window).scroll(function(){
@@ -285,7 +533,7 @@ $(document).ready(function(){
 	  time_hour = parseInt(sessionStorage.getItem("hour"), 10);
 	  time_minute = parseInt(sessionStorage.getItem("minute"), 10);
 	  
-	  if(Math.random() < 0.2){ // If user navigates away after 59 seconds whole 1 minute is lost
+	  if(Math.random() < 0.25){ // If user navigates away after 59 seconds whole 1 minute is lost
 	  	time_minute += 1; // So assume 5 navigations per minute (if user starts browsing around)
 	  	sessionStorage.setItem("minute", time_minute);
 	  }
@@ -353,6 +601,28 @@ $(document).ready(function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $(this).addClass('left-panel-link-highlight');	
 	});
+
+	$('#summary-weekly').on('click', function(){
+		if (summary_state === 'daily') {
+			summary_state = 'weekly';
+			if (jsdata['data']) { // don't do anything if first data has not arrived
+				mainContentDiv.empty();
+				mainContentDiv.append('<div class="empty-box"></div>');
+				render_content(0);
+			}
+		}
+	});
+	$('#summary-daily').on('click', function(){
+		if (summary_state === 'weekly'){
+			summary_state = 'daily';
+			if (jsdata['data']) {// don't do anything before first data has arrived
+				mainContentDiv.empty();
+				mainContentDiv.append('<div class="empty-box"></div>');
+				render_content(0);
+			}
+		}
+	});
+
 
 	$('#project-panel').find('li').on('click', 'a', function(){
 		$('#project-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first

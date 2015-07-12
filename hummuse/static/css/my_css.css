@@ -379,22 +379,37 @@ body{
   border-right: 1px solid rgba(200,200,200,0.4);
 }
 
-.loading-gif{
-  margin: 0 auto;
-  width: 100px;
-  height: 50px;
-  margin-top: 10px;
-  display: block;
+.initial-loading-container{
+  height: 400px;
+}
+@media (max-width: 991px) { /* for xtra-small and small devices */
+  .initial-loading-container{
+     height: 200px;
+  }
+}
+.initial-loading-gif{
+  margin: auto;
+  width: 48px;
+  height: 48px;
+  position: relative;
+  top: 30%;
 }
 
-.div-load-more{
-  height: 60px;
-  width: 66%;
-  text-align: center;
-  visibility: hidden;
-  margin-top: 2px;
+
+#div-load-more{
+  height: 20px;
+  width: 80px;
+  position: relative;
+  left: 30%;
 }
 
+a.load-more-click:hove{
+  text-decoration: none;
+}
+
+.empty-box{
+  min-height: 120px;
+}
 
 
 

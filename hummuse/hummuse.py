@@ -8,6 +8,7 @@ import os
 import jinja2
 from google.appengine.ext import ndb
 from google.appengine.api import users
+from google.appengine.api import memcache
 from google.appengine.datastore.datastore_query import Cursor
 import logging
 import datetime
@@ -41,7 +42,11 @@ class Account(ndb.Model):
 		ent.key = key
 		ent.put()
 		return True  # True meaning "Newly created"
-	
+
+class OpaqueCursor(ndb.Model):
+	# Set Account as the parent 
+	# as different users should be able to store different cursor
+	cursor = ndb.StringProperty(required = True);	
 		
 class Projects(ndb.Model):
 	# Set Account as the parent of a Project
@@ -217,7 +222,12 @@ class MakeEntryHandler(Handler):
 			#tags
 			# convert space seperated string to list of strings
 			#logging.error(self.request.get('tags'))
-			tags = str(urllib.unquote(self.request.get('tags'))).split(',') 
+			tags = str(urllib.unquote(self.request.get('tags'))).split(',')
+			# default empty value is [u'']. change this to [] - sadly not working
+			# so we deal with it in the client side
+			if len(tags) == 1 and tags[0]:
+				tags = []
+
 
 			#logging.error(self.request.get('formkind'))
 			formkind = str( (self.request.get('formkind') ) ) 
@@ -241,7 +251,7 @@ class MakeEntryHandler(Handler):
 						 	'hoursWorked': hours,
 						 	'isAchievement': isAchievement,
 						  	'tags': tags 
-						 	  }) 
+						 	  })
 
 			else:
 				entry.update({'parent': user_ent_key,
@@ -356,10 +366,48 @@ class AjaxHomeHandler(Handler):
 			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())
 
-			cursor = Cursor(urlsafe = self.request.get('cursor', default_value=None))
-			logging.error(self.request.get('cursor', default_value=None))
+			
+			# this is opaque id of cursor sent from the client
+			# Note!!!!!! No need to send an id -just 0 and 1 will be enough
+			cursor_id = self.request.get('cursor', default_value=None)
+			cursor_obj = None
+			cursor_key = None
+			start_cursor = None
+
+			if cursor_id:
+				cursor_key = ndb.Key('OpaqueCursor', int(cursor_id), parent = user_ent_key)
+				cursor_obj = memcache.get('ajax-cursor')
+				logging.error(cursor_obj)
+				if cursor_obj is None:
+					logging.error('---------\n---------Cache Miss------')
+					cursor_obj = cursor_key.get()
+				start_cursor = Cursor(urlsafe = cursor_obj.cursor)
+
+			#logging.error(self.request.get('cursor', default_value=None))
 			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			entries, next_cursor, more = qry.fetch_page(20, start_cursor=cursor); 
+			entries, next_cursor, more = qry.fetch_page(20, start_cursor=start_cursor); 
+
+			if cursor_id:
+				cursor_obj.cursor = next_cursor.urlsafe()
+				cursor_obj.put()
+				memcache.set('ajax-cursor', cursor_obj, 1800)
+			else:	# refresh
+				# check whether any cursor already present
+				# otherwise we'll be recreating an OpaqueCursor entity for every refresh
+				all_cursors_query = ndb.gql("SELECT * FROM OpaqueCursor WHERE ANCESTOR IS :1", user_ent_key)
+				saved_cursor = list(all_cursors_query)
+				if(saved_cursor): # not empty - update
+					saved_cursor[0].cursor = next_cursor.urlsafe()
+					cursor_key = saved_cursor[0].put()
+					cursor_id = cursor_key.id()
+					#memcache.delete('ajax-cursor')
+					memcache.set('ajax-cursor', saved_cursor[0], 1800)
+					
+				else: # first time ever user is saving a cursor -only happens once for a user
+					# but may be better to separate from account creation for maintainability
+					cursor_key = OpaqueCursor(parent = user_ent_key, cursor = next_cursor.urlsafe()).put()	
+					cursor_id = cursor_key.id()
+
 			# Need to restructure the query result by aggregating over the date 
 			entries_by_date = [] # top level of json to return
 			#t = datetime.date.today() # Sorry! datetime is not json serializable
@@ -377,7 +425,7 @@ class AjaxHomeHandler(Handler):
 
 				todays_entries.append(entrydict)
 			
-			whole_data = {"data": entries_by_date, "cursor": next_cursor.urlsafe(), "more": more}
+			whole_data = {"data": entries_by_date, "cursor": cursor_id, "more": more}
 			self.response.out.write(json.dumps(whole_data))	
 
 class WelcomePageHandler(Handler):
