@@ -120,6 +120,22 @@
 
    <form method="post" id="form-work" class="form-horizontal my-form-styles" role="form">  
     
+    
+    <!-- Pick Date dropdown button -->
+    <div class="form-group my-form-group">
+      <label class="control-label col-md-2" for="date-form-button"><div class="data-highlight">Date</div></label>
+      <div class="col-md-8">
+        <div class="btn-group select-button" tabindex="2">
+          <button type="button" id="date-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">
+          Today<span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu select-dropdown-menu" role="menu">
+              <!-- Code goes in javascript -->
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- Choose Activity Dropdown box -->
     <div class="form-group my-form-group">
       <label class="control-label col-md-2" for="work-form-button">
@@ -139,20 +155,7 @@
       </div>
     
     </div>
-    <!-- Pick Date dropdown button -->
-    <div class="form-group my-form-group">
-      <label class="control-label col-md-2" for="date-form-button"><div class="data-highlight">Date</div></label>
-      <div class="col-md-8">
-        <div class="btn-group select-button" tabindex="2">
-          <button type="button" id="date-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">
-          Today<span class="caret"></span>
-          </button>
-          <ul class="dropdown-menu select-dropdown-menu" role="menu">
-              <!-- Code goes in javascript -->
-          </ul>
-        </div>
-      </div>
-    </div>
+    
     <!-- Hours and minutes -->
     <div class="form-group my-form-group">
       <label class="control-label col-md-2" for="working-time" style="padding-top:16px;">

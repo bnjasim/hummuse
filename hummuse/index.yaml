@@ -15,4 +15,33 @@ indexes:
   properties:
   - name: date
     direction: desc
+
+- kind: Entry
+  ancestor: yes
+  properties:
+  - name: date
+    direction: desc
+  - name: project
+
+- kind: Entry
+  ancestor: yes
+  properties:
+  - name: normtags
+  - name: date
+    direction: desc
+
+- kind: Entry
+  ancestor: yes
+  properties:
+  - name: normtags
+  - name: date
+    direction: desc
+  - name: project
+
+- kind: Entry
+  ancestor: yes
+  properties:
+  - name: tags
+  - name: date
+    direction: desc
   - name: project

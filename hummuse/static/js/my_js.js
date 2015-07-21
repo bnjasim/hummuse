@@ -6,11 +6,14 @@ $(document).ready(function(){
  /*---------We receive json data from the server
   the  rendering of daily-box div is done in the client side*/
   jsdata = {}; // json/js data stored globally and later on added to it
-  weeks_loaded = 0; // how many weeks have already been rendered 
+  var weeks_loaded = 0; // how many weeks have already been rendered 
   var template = $('#template').html();
+  var template_search = $('#template-search').html();
   var mainContentDiv = $('#json-div');
   // summary state can be changed to weekly and back to daily
   var summary_state = 'daily';
+  var search = {}; // keep details such as cursor_id, more etc.
+  var processing = false; // is another ajax search is going on
 
   // function to extract sentences out of html (string)
   // similar to innertextcontent() function
@@ -63,6 +66,11 @@ $(document).ready(function(){
   			a.text('Done!');
   			a.css('color', '#777');
   			a.css('text-decoration', 'none');
+  			a.css('cursor', 'default')
+  			a.click(function() {
+  				return false;
+  			});
+
   		}
   	}
 
@@ -363,7 +371,7 @@ $(document).ready(function(){
  		// jsdata is the available global data
  		var offset = 0;
  		var data_new = received_data['data'],
- 				data_old = jsdata['data'];
+ 			data_old = jsdata['data'];
 
  		if (data_new.length === 0){
  			finished_load();
@@ -452,9 +460,66 @@ $(document).ready(function(){
 		}); 
 	}
 
+
+
+
+	// function to render the search by tag results
+	var display_search_results = function(search_results, tag){
+		var results = search_results['results'];
+		search['cursor'] = search_results['cursor'];
+		search['more'] = search_results['more'];
+		search['results'] = results;
+		
+		if ($('.initial-loading-container'))
+			$('.initial-loading-container').remove();
+		
+
+		for (var i=0; i<results.length; ++i){
+			var entry = results[i];
+			
+			var rendered = Mustache.render(template_search, entry);
+  			
+  			mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
+  			mainContentDiv.append('<div class="empty-box"></div>');
+			
+		}
+		mainContentDiv.find('.empty-box').html('<div id="div-load-more"></div>');
+		$('#div-load-more').append('<a class="load-more-click">Load >></a>');
+			
+  		if (search['more']) {
+  				
+  				$('a.load-more-click').on('click', function(){
+  					// empty and append = html
+					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
+					search_ajax_tag(tag, search['cursor']);
+				});
+		}
+		else 
+			finished_load();
+
+	}
+
+	var search_ajax_tag = function(tag, cursor){
+		$.ajax({
+			url: '/searchtags',
+			type: 'GET',
+			data: {'tag': tag, 'cursor': cursor},
+			dataType: 'json',
+			success: function(search_results){
+				display_search_results(search_results, tag);
+				processing = false;
+			},
+			error: function(e){
+				alert('Server Error: Search Failed' + e);
+			}
+		}); 
+	}
+
     // make ajax call only from home page
-    if (mainContentDiv.length > 0) // if $(#json-div) is present
+    if (mainContentDiv.length > 0){ // if $(#json-div) is present
 		make_ajax_call();
+	
+	}
 	
 
 /*	var ajax_not_fired = true;
@@ -480,6 +545,38 @@ $(document).ready(function(){
 		}
 	});
 */
+
+	/********** Searching Tags ***************/
+	/****************************************/
+	// trigger submit by pressing enter in the input area
+	// keyup better than keydown because it avoids multiple submissions (not sure though)
+	$('#search-input').keyup( function(event){
+		if (event.keyCode === 13){
+			$('#search-button').click();
+		}
+	});
+	// prevent default bootstrap behavior of submiting the form 
+	// when pressed enter
+	$('form input').keydown(function(event){
+    	if(event.keyCode == 13) {
+      		event.preventDefault();
+  		//  return false;
+    	}
+  	});
+
+  	$('#search-button').click(function(){
+  		var tag = $('#search-input').val();
+  		tag = tag.trim();
+  		tag = tag.toLowerCase().replace(/ /g, '')
+  		if (tag && !processing){
+  			// make sure that there is already no ajax request running behind the scenes
+  			mainContentDiv.empty();
+			summary_state = 'search';
+			processing = true;
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+  			search_ajax_tag(tag);
+  		}
+  	});
 
 
 
@@ -603,7 +700,7 @@ $(document).ready(function(){
 	});
 
 	$('#summary-weekly').on('click', function(){
-		if (summary_state === 'daily') {
+		if (summary_state !== 'weekly') {
 			summary_state = 'weekly';
 			if (jsdata['data']) { // don't do anything if first data has not arrived
 				mainContentDiv.empty();
@@ -613,7 +710,7 @@ $(document).ready(function(){
 		}
 	});
 	$('#summary-daily').on('click', function(){
-		if (summary_state === 'weekly'){
+		if (summary_state !== 'daily'){
 			summary_state = 'daily';
 			if (jsdata['data']) {// don't do anything before first data has arrived
 				mainContentDiv.empty();
@@ -721,6 +818,16 @@ $(document).ready(function(){
 		  	star.data('value', true);
 		});
 
+		// simulate button click by pressing Enter
+		$('#tag-input-text').keyup(function(event){
+			if(event.keyCode === 13)
+				$('#add-tag-button').click();
+		});
+
+		$('#event-tag-input-text').keyup(function(event){
+			if(event.keyCode === 13)
+				$('#event-add-tag-button').click();
+		});
 		// function to find whether a string is present in a list
 		// case insensitive findtag(["binu", "jasim"], BiNu) => true
 		var findtag = function(a, query){

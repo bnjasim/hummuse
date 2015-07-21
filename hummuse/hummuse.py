@@ -47,6 +47,10 @@ class OpaqueCursor(ndb.Model):
 	# Set Account as the parent 
 	# as different users should be able to store different cursor
 	cursor = ndb.StringProperty(required = True);	
+
+# to keep next tag search result cursor
+class SearchCursor(ndb.Model):
+	cursor = ndb.StringProperty(required = True);	
 		
 class Projects(ndb.Model):
 	# Set Account as the parent of a Project
@@ -64,15 +68,25 @@ class Projects(ndb.Model):
 class Entry(ndb.Model):
 	# Need to set Account as the parent of every entry
 	date = ndb.DateProperty(required = True)	
-	isAchievement = ndb.BooleanProperty(default = False)
-	notes = ndb.TextProperty()
-	tags = ndb.StringProperty(repeated = True)
-	project = ndb.KeyProperty(Projects)
-	projectName = ndb.StringProperty()
-	isWorkProductive = ndb.BooleanProperty()
-	hoursWorked = ndb.FloatProperty()
 	datakind = ndb.StringProperty(choices = ["work", "event"])
+	isAchievement = ndb.BooleanProperty(default = False, indexed = False)
+	notes = ndb.TextProperty()
+	tags = ndb.StringProperty(repeated = True, indexed = False)
+	# normalized tags eg. "App Engine" --> "appengine" - computed property
+	normtags = ndb.ComputedProperty(lambda self: self._normalize_tags(), repeated = True)
+	project = ndb.KeyProperty(Projects, indexed = False)
+	projectName = ndb.StringProperty(indexed = False)
+	isWorkProductive = ndb.BooleanProperty(indexed = False)
+	hoursWorked = ndb.FloatProperty(indexed = False)
+	
+	def _normalize_tags(self):
+		return [t.lower().replace(' ', '') for t in self.tags]
 
+
+
+class Tags(ndb.Model):
+	# Account is the parent as usual
+	tagName = ndb.StringProperty(required = True)
 
 class Handler(webapp2.RequestHandler):
 	def write(self, *a, **kw):
@@ -223,11 +237,7 @@ class MakeEntryHandler(Handler):
 			# convert space seperated string to list of strings
 			#logging.error(self.request.get('tags'))
 			tags = str(urllib.unquote(self.request.get('tags'))).split(',')
-			# default empty value is [u'']. change this to [] - sadly not working
-			# so we deal with it in the client side
-			if len(tags) == 1 and tags[0]:
-				tags = []
-
+			
 
 			#logging.error(self.request.get('formkind'))
 			formkind = str( (self.request.get('formkind') ) ) 
@@ -292,8 +302,9 @@ class LoginHandler(webapp2.RequestHandler):
 def make_entry_dict(e):
 
 	dateString = utils.date_string(e.date)
+	isWork = e.datakind == 'work'
 
-	return {'isWork': e.datakind == 'work', 'date': dateString, 'isachiev': e.isAchievement,
+	return {'isWork': isWork, 'date': dateString, 'isachiev': e.isAchievement,
 			'notes': e.notes, 'tags': e.tags, 'proj': e.projectName, 'hrs': e.hoursWorked,
 			'isproductive': e.isWorkProductive};
 		
@@ -363,12 +374,10 @@ class AjaxHomeHandler(Handler):
 			self.redirect('/welcome')
 			
 		else:
-			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())
 
 			
 			# this is opaque id of cursor sent from the client
-			# Note!!!!!! No need to send an id -just 0 and 1 will be enough
 			cursor_id = self.request.get('cursor', default_value=None)
 			cursor_obj = None
 			cursor_key = None
@@ -377,15 +386,16 @@ class AjaxHomeHandler(Handler):
 			if cursor_id:
 				cursor_key = ndb.Key('OpaqueCursor', int(cursor_id), parent = user_ent_key)
 				cursor_obj = memcache.get('ajax-cursor')
-				logging.error(cursor_obj)
+				
 				if cursor_obj is None:
-					logging.error('---------\n---------Cache Miss------')
+					#logging.error('---------\n---------Cache Miss------')
 					cursor_obj = cursor_key.get()
+
 				start_cursor = Cursor(urlsafe = cursor_obj.cursor)
 
 			#logging.error(self.request.get('cursor', default_value=None))
-			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date, Entry.project)	
-			entries, next_cursor, more = qry.fetch_page(20, start_cursor=start_cursor); 
+			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date)	
+			entries, next_cursor, more = qry.fetch_page(20, start_cursor=start_cursor)
 
 			if cursor_id:
 				cursor_obj.cursor = next_cursor.urlsafe()
@@ -428,9 +438,102 @@ class AjaxHomeHandler(Handler):
 			whole_data = {"data": entries_by_date, "cursor": cursor_id, "more": more}
 			self.response.out.write(json.dumps(whole_data))	
 
+
+
+
+
+
+class AjaxTagsHandler(Handler):
+
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())
+			tag = self.request.get('tag', default_value=None)
+			cur_id = self.request.get('cursor', default_value=None)
+			start_cursor = None
+			cursor_key = None
+			cursor_obj = None
+
+			if cur_id is not None:
+				# load more
+				cursor_key = ndb.Key('SearchCursor', int(cur_id), parent = user_ent_key)
+				cursor_obj = memcache.get('tag-cursor')
+				if cursor_obj is None:
+					cursor_obj = cursor_key.get()
+				
+				start_cursor = Cursor(urlsafe = cursor_obj.cursor)	
+
+			if tag is None or tag.replace(' ','') == '':
+				self.response.out.write(json.dumps({}))
+
+			else:
+				tag = tag.lower().replace(' ', '')
+				# later------ check if the tag is present in the Tags list
+				# Now just search over entries
+				qry = Entry.query(ancestor = user_ent_key).filter(Entry.normtags==tag).order(-Entry.date)	
+				entries, next_cursor, more = qry.fetch_page(5, start_cursor=start_cursor)
+
+				if next_cursor is not None:
+
+					if cur_id is not None:
+						cursor_obj.cursor = next_cursor.urlsafe()
+						cursor_obj.put()
+						memcache.set('tag-cursor', cursor_obj)
+
+					else:	
+						all_cursors_query = ndb.gql("SELECT * FROM SearchCursor WHERE ANCESTOR IS :1", user_ent_key)
+						saved_cursor = list(all_cursors_query)
+						if(saved_cursor): # not empty - update
+							saved_cursor[0].cursor = next_cursor.urlsafe()
+							cursor_key = saved_cursor[0].put()
+							cur_id = cursor_key.id()
+							memcache.set('tag-cursor', saved_cursor[0], 1800)
+							#logging.error('---------\n------Restored saved cursor--\n--------')
+						else:	
+							cursor_obj = SearchCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
+							cursor_key = cursor_obj.put()
+							cur_id = cursor_key.id()		
+							memcache.set('tag-cursor', cursor_obj, 1800)
+
+						
+				# entries is not json serializable because of date object
+				results = []
+				for entry in entries:
+					entrydict = make_entry_dict(entry)
+					results.append(entrydict)
+
+				search_results = {"results": results, "more": more, "cursor": cur_id}
+				self.response.out.write(json.dumps(search_results))
+			
+
+
 class WelcomePageHandler(Handler):
 	def get(self):
 		self.render("welcome.html")
+
+
+
+class UpdateHandler(Handler):
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())
+			qry = Entry.query(ancestor = user_ent_key)
+			data = qry.fetch()
+
+			for d in data:
+				d.put()
+
+		self.response.out.write('Done!')		
+
+
 
 app = webapp2.WSGIApplication([
 	('/', HomeHandler),
@@ -439,7 +542,9 @@ app = webapp2.WSGIApplication([
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),
     ('/welcome', WelcomePageHandler),
-    ('/ajaxhome', AjaxHomeHandler)
+    ('/ajaxhome', AjaxHomeHandler),
+    ('/searchtags', AjaxTagsHandler),
+    ('/update', UpdateHandler)
    ], debug=True)
 
 #@webapp_add_wsgi_middleware

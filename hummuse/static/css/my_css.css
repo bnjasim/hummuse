@@ -13,6 +13,7 @@ body{
 	margin-top: 70px;
 	font-family:  "Palatino Linotype", serif; /*georgia*/
 	font-size: 16px;
+  overflow-y: scroll;
 }
 
 .modal-open { /* overwrite the default to prevent body from jumping left 17px */
