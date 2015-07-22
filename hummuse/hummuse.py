@@ -60,8 +60,9 @@ class Projects(ndb.Model):
 	projectActive = ndb.BooleanProperty(default = True)
 	projectShared = ndb.BooleanProperty(default = False)
 	projectProductive = ndb.BooleanProperty(default = True)
-	#projectPriority = ndb.FloatProperty(default = 1) # got rid of this
-	# + how many times its used in the past
+	projectLastAccessed = ndb.DateTimeProperty(auto_now_add = True)
+	projectLastHour = ndb.FloatProperty(indexed = False, default = 0.5)
+	projectEntriesNo = ndb.IntegerProperty(default = 0)
 	#projectColor = ndb.StringProperty(default = '#ffffff')
 
 # Base class for Work and Event
@@ -74,7 +75,7 @@ class Entry(ndb.Model):
 	tags = ndb.StringProperty(repeated = True, indexed = False)
 	# normalized tags eg. "App Engine" --> "appengine" - computed property
 	normtags = ndb.ComputedProperty(lambda self: self._normalize_tags(), repeated = True)
-	project = ndb.KeyProperty(Projects, indexed = False)
+	project = ndb.KeyProperty(Projects)
 	projectName = ndb.StringProperty(indexed = False)
 	isWorkProductive = ndb.BooleanProperty(indexed = False)
 	hoursWorked = ndb.FloatProperty(indexed = False)
@@ -172,16 +173,17 @@ class DeleteProjectHandler(Handler):
 				p.projectActive = False
 				p.put()
 				message = format("Project \""+ p.projectName +"\" deleted successfully! ")
-			else: message = "Couldn't delete"
-			self.redirect('/project?dmessage='+message)
+				self.redirect(users.create_login_url('/new_user'))
+
+
 
 class MakeEntryHandler(Handler):
 	
 	def get(self):
 		user = users.get_current_user()
 		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
-			
+			self.redirect(users.create_login_url('/welcome'))
+
 		else:
 			logout_url = users.create_logout_url('/')
 			user_ent_key = ndb.Key(Account, user.user_id())	
@@ -207,13 +209,6 @@ class MakeEntryHandler(Handler):
 			self.redirect(users.create_login_url('/new_user'))
 			
 		else:
-			#fileds in Data
-			#date = ndb.DateProperty(required = True)	
-			#isAchievement = ndb.BooleanProperty(default = False)
-			#notes = ndb.TextProperty()
-			#tags = ndb.StringProperty(repeated = True)
-			#project = ndb.KeyProperty(Projects)
-			#hoursWorked = ndb.FloatProperty()
 			user_ent_key = ndb.Key(Account, user.user_id())	
 			entry = {}
 			# date - a string of the format "Wed Jun 24 2015" - 15 characters
@@ -368,15 +363,16 @@ class HomeHandler(Handler):
 
 class AjaxHomeHandler(Handler):
 
-	def get(self):
+	def post(self):
 		user = users.get_current_user()
 		if user is None: 
 			self.redirect('/welcome')
 			
 		else:
-			user_ent_key = ndb.Key(Account, user.user_id())
+			user_id = user.user_id()
+			#logging.error('---------\n------'+user_id+'--\n--------')
+			user_ent_key = ndb.Key(Account, user_id)
 
-			
 			# this is opaque id of cursor sent from the client
 			cursor_id = self.request.get('cursor', default_value=None)
 			cursor_obj = None
@@ -385,7 +381,7 @@ class AjaxHomeHandler(Handler):
 
 			if cursor_id:
 				cursor_key = ndb.Key('OpaqueCursor', int(cursor_id), parent = user_ent_key)
-				cursor_obj = memcache.get('ajax-cursor')
+				cursor_obj = memcache.get(user_id+'ajax-cursor')
 				
 				if cursor_obj is None:
 					#logging.error('---------\n---------Cache Miss------')
@@ -400,7 +396,7 @@ class AjaxHomeHandler(Handler):
 			if cursor_id:
 				cursor_obj.cursor = next_cursor.urlsafe()
 				cursor_obj.put()
-				memcache.set('ajax-cursor', cursor_obj, 1800)
+				memcache.set(user_id+'ajax-cursor', cursor_obj, 1800)
 			else:	# refresh
 				# check whether any cursor already present
 				# otherwise we'll be recreating an OpaqueCursor entity for every refresh
@@ -411,7 +407,7 @@ class AjaxHomeHandler(Handler):
 					cursor_key = saved_cursor[0].put()
 					cursor_id = cursor_key.id()
 					#memcache.delete('ajax-cursor')
-					memcache.set('ajax-cursor', saved_cursor[0], 1800)
+					memcache.set(user_id+'ajax-cursor', saved_cursor[0], 1800)
 					
 				else: # first time ever user is saving a cursor -only happens once for a user
 					# but may be better to separate from account creation for maintainability
@@ -445,13 +441,14 @@ class AjaxHomeHandler(Handler):
 
 class AjaxTagsHandler(Handler):
 
-	def get(self):
+	def post(self):
 		user = users.get_current_user()
 		if user is None: 
 			self.redirect('/welcome')
 			
 		else:
-			user_ent_key = ndb.Key(Account, user.user_id())
+			user_id = user.user_id()
+			user_ent_key = ndb.Key(Account, user_id)
 			tag = self.request.get('tag', default_value=None)
 			cur_id = self.request.get('cursor', default_value=None)
 			start_cursor = None
@@ -461,7 +458,7 @@ class AjaxTagsHandler(Handler):
 			if cur_id is not None:
 				# load more
 				cursor_key = ndb.Key('SearchCursor', int(cur_id), parent = user_ent_key)
-				cursor_obj = memcache.get('tag-cursor')
+				cursor_obj = memcache.get(user_id+'tag-cursor')
 				if cursor_obj is None:
 					cursor_obj = cursor_key.get()
 				
@@ -482,7 +479,7 @@ class AjaxTagsHandler(Handler):
 					if cur_id is not None:
 						cursor_obj.cursor = next_cursor.urlsafe()
 						cursor_obj.put()
-						memcache.set('tag-cursor', cursor_obj)
+						memcache.set(user_id+'tag-cursor', cursor_obj)
 
 					else:	
 						all_cursors_query = ndb.gql("SELECT * FROM SearchCursor WHERE ANCESTOR IS :1", user_ent_key)
@@ -491,24 +488,62 @@ class AjaxTagsHandler(Handler):
 							saved_cursor[0].cursor = next_cursor.urlsafe()
 							cursor_key = saved_cursor[0].put()
 							cur_id = cursor_key.id()
-							memcache.set('tag-cursor', saved_cursor[0], 1800)
+							memcache.set(user_id+'tag-cursor', saved_cursor[0], 1800)
 							#logging.error('---------\n------Restored saved cursor--\n--------')
 						else:	
 							cursor_obj = SearchCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
 							cursor_key = cursor_obj.put()
 							cur_id = cursor_key.id()		
-							memcache.set('tag-cursor', cursor_obj, 1800)
+							memcache.set(user_id+'tag-cursor', cursor_obj, 1800)
 
 						
 				# entries is not json serializable because of date object
 				results = []
 				for entry in entries:
 					entrydict = make_entry_dict(entry)
-					results.append(entrydict)
+					# to conform to the dailybox structure
+					entrybox = {'entries':[entrydict]}
+					entrybox['date'] = entrydict['date']
+					results.append(entrybox) 
 
 				search_results = {"results": results, "more": more, "cursor": cur_id}
 				self.response.out.write(json.dumps(search_results))
+
+def make_projects_dict(p):
+	return {'projectName': p.projectName, 'project': p.key.id()}
+
+# returns the list of all projects			
+class AjaxProjectsHandler(Handler):
+
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
 			
+		else:
+			user_id = user.user_id()
+			user_ent_key = ndb.Key(Account, user_id)
+			flag_all = self.request.get('all', default_value=False)
+
+			pbox = []
+			if flag_all:
+				# retrieve in alphabetical order
+				qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
+				all_projects = qry.fetch()
+				for p in all_projects:
+					pbox.append(make_projects_dict(p))
+
+			else:
+				# retrieve in last accessed order first 6/7 projects
+				qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
+				top_projects = qry.fetch(7)	
+				for p in top_projects:
+					pbox.append(make_projects_dict(p))
+
+			projects = {'pbox': pbox}		
+			self.response.out.write(json.dumps(projects))		
+
+
 
 
 class WelcomePageHandler(Handler):
@@ -525,11 +560,13 @@ class UpdateHandler(Handler):
 			
 		else:
 			user_ent_key = ndb.Key(Account, user.user_id())
-			qry = Entry.query(ancestor = user_ent_key)
+			qry = Projects.query(ancestor = user_ent_key)
 			data = qry.fetch()
 
 			for d in data:
-				d.put()
+				if 'projecthotness' in d._properties:
+					del d._properties['projecthotness']				
+					d.put()	
 
 		self.response.out.write('Done!')		
 
@@ -544,6 +581,7 @@ app = webapp2.WSGIApplication([
     ('/welcome', WelcomePageHandler),
     ('/ajaxhome', AjaxHomeHandler),
     ('/searchtags', AjaxTagsHandler),
+    ('/ajaxprojects', AjaxProjectsHandler),
     ('/update', UpdateHandler)
    ], debug=True)
 

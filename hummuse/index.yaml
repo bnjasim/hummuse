@@ -45,3 +45,14 @@ indexes:
   - name: date
     direction: desc
   - name: project
+
+- kind: Projects
+  ancestor: yes
+  properties:
+  - name: projectLastAccessed
+    direction: desc
+
+- kind: Projects
+  ancestor: yes
+  properties:
+  - name: projectName

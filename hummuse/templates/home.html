@@ -121,19 +121,20 @@
     <a>Special Works</a>
   </div>
 -->
-  <div class="panel-content" id="project-panel">	
-	<div class="panel-header">Project
+  <div id="projects-panel" class="panel-content">	
+	 <div class="panel-header">Projects
 	 <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
-	</div>
-	<ul class="left-panel-ul">
+	 </div>
+	 <ul class="left-panel-ul">
 	  <li>
 	    <a class="left-panel-link-highlight">All</a>
 	  </li>
-	  <li><a>Hummuse</a></li>
+	  <!--<li><a>Hummuse</a></li>
 	  <li><a>Data Science</a></li>
 	  <li><a>NLP Teaching</a></li>
 	  <li><a>Quora</a></li>
-	</ul>
+    -->
+	 </ul>
   </div>
 
 </div>
@@ -254,7 +255,7 @@
            {{/isWork}}  
           {{/entries}}
 
-          {{^totalnone}}
+          {{#totalpresent}}
           <tr>
             <td class="first-column">
                 <b>Total</b>:
@@ -270,7 +271,7 @@
                 
               </td>  
           </tr>
-          {{/totalnone}}  
+          {{/totalpresent}}  
           </table>
         </div>
       </div>  
@@ -279,56 +280,6 @@
 </script>
 {% endraw %}
 
-<!-- Mustache template - avoided by jinja 
-     Template for rendering Search results -->
-{% raw %}
-<script id="template-search" type="x-tmpl-mustache">
-
-    <div class="date-box">
-        {{date}}
-        {{#enddate}}
-        - {{enddate}}
-        {{/enddate}}
-    </div> 
-
-    <div class="row">
-      <div class="col-md-8 notes-area">
-        <ul>
-          <li class="entry-box">
-            <div class="bullet-raja-pencil"> 
-              {{#isWork}}            
-                <span class="glyphicon glyphicon-pencil"></span>
-              {{/isWork}}  
-              {{^isWork}}
-                <span class="glyphicon glyphicon-paperclip"></span>
-              {{/isWork}}
-            </div>
-            {{#isWork}}            
-                <div class="entry-box-title">{{projectName}}</div>:
-            {{/isWork}}  
-
-            {{^notes}}
-              <i style="font-style:15px;">No notes</i>
-            {{/notes}}  
-
-            {{#notes}}
-              {{{notes}}}
-            {{/notes}}              
-
-            <div class="tags-box">
-            {{#tags}}
-              <div class="tags-added">
-                {{.}}
-              </div>
-            {{/tags}}
-            </div>  
-            
-          </li>  
-        </ul>  
-      </div>
-    </div>
-</script>
-{% endraw %}
 
 
 

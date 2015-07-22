@@ -8,7 +8,6 @@ $(document).ready(function(){
   jsdata = {}; // json/js data stored globally and later on added to it
   var weeks_loaded = 0; // how many weeks have already been rendered 
   var template = $('#template').html();
-  var template_search = $('#template-search').html();
   var mainContentDiv = $('#json-div');
   // summary state can be changed to weekly and back to daily
   var summary_state = 'daily';
@@ -257,6 +256,52 @@ $(document).ready(function(){
   	}
 
 
+  	// common to search tag and daily,weekly display 
+  	// computes hrs of work, short notes etc..
+  	var entry_common_computations = function(entries){
+
+  		var total = 0
+
+  		for(var j=0; j<entries.length; ++j){
+  			var entry = entries[j];
+  			// if tags is [''] need to change to []
+  			var t = entry.tags;
+  			if (t.length === 1 && t[0] === "")
+  				entry.tags = [];
+
+  			// add hrs to total only if project productive
+  			// isproductive automatically implies isWork
+  			if(entry['isWork']) // important**** change to isproductive
+  				total += entry['hrs'];
+
+  			var hrs = entry['hrs'],
+  				h = Math.floor(hrs),
+				m = Math.ceil((hrs - h) * 60);
+			
+			entry['h'] = h;
+			entry['ishz'] = (h === 0);
+			entry['m'] = m;
+			entry['ismz'] = (m === 0);
+
+			var notes = entry['notes'],
+				note_word_limit = 30, // first 30 words
+				note_char_limit = 120,
+				isnotebig = true;
+
+			if (!entry['shortnotes'])	
+				isnotebig = notes.length > note_char_limit;
+
+					
+			entry['isnbig'] = isnotebig;
+
+			if (isnotebig && !entry['shortnotes']) 
+				entry['shortnotes'] = formShortNotes(notes, note_word_limit);
+
+  		}
+
+  		return total;	
+  	}
+
   	var render_content = function(offset){
   		//jsdata = JSON.parse(data); //[{"data": [{"date":date, "entries":[....]}, {} ...]
   		var data = jsdata['data']; // array of dayboxes
@@ -272,43 +317,9 @@ $(document).ready(function(){
   			for(var i=offset; i<formatted_data.length; ++i){
   				var daybox = formatted_data[i]; // we are rendering this json/js data structure
   				// reformat to compute total hours, shortnotes etc.
-  				var total = 0;
   				var entries = daybox.entries;
-  				for(var j=0; j<entries.length; ++j){
-  					var entry = entries[j];
-  					// if tags is [''] need to change to []
-  					var t = entry.tags;
-  					if (t.length === 1 && t[0] === "")
-  						entry.tags = [];
 
-  					// add hrs to total only if project productive
-  					// isproductive automatically implies isWork
-  					if(entry['isWork']) // important**** change to isproductive
-  						total += entry['hrs'];
-
-  					var hrs = entry['hrs'],
-  						h = Math.floor(hrs),
-						m = Math.ceil((hrs - h) * 60);
-					entry['h'] = h;
-					entry['ishz'] = (h === 0);
-					entry['m'] = m;
-					entry['ismz'] = (m === 0);
-
-					var notes = entry['notes'],
-						note_word_limit = 30, // first 30 words
-						note_char_limit = 120,
-						isnotebig = true;
-
-					if (!entry['shortnotes'])	
-						isnotebig = notes.length > note_char_limit;
-
-					
-					entry['isnbig'] = isnotebig;
-
-					if (isnotebig && !entry['shortnotes']) 
-						entry['shortnotes'] = formShortNotes(notes, note_word_limit);
-
-  				}
+  				var total = entry_common_computations(entries); // this alters the entry
 
   				var totalh = Math.floor(total),
   					totalm = Math.ceil((total - totalh)*60);
@@ -317,8 +328,8 @@ $(document).ready(function(){
   				if(totalm > 0)
   					daybox['totalm'] = totalm;
   				// don't display 'Total' if
-  				if(totalh==0 && totalm==0)
-  					daybox['totalnone'] = true;
+  				if(entries.length>1 && (totalh>0 || totalm>0))
+  					daybox['totalpresent'] = true;
 
 
   				var rendered = Mustache.render(template, daybox);
@@ -448,7 +459,7 @@ $(document).ready(function(){
 	var make_ajax_call = function(){
 		$.ajax({
 			url: '/ajaxhome',
-			type: 'GET',
+			type: 'POST',
 			data: {'cursor':jsdata['cursor']},
 			dataType: 'json',
 			success: function(received_data){
@@ -465,24 +476,35 @@ $(document).ready(function(){
 
 	// function to render the search by tag results
 	var display_search_results = function(search_results, tag){
+		
 		var results = search_results['results'];
 		search['cursor'] = search_results['cursor'];
 		search['more'] = search_results['more'];
 		search['results'] = results;
+
+		if (!results || results.length===0)
+			$('#main-content-title').html('No results found for <b>'+tag+'</b>');
+		else
+			$('#main-content-title').html('Search results for <b>'+tag+'</b>');
+			
 		
 		if ($('.initial-loading-container'))
 			$('.initial-loading-container').remove();
 		
 
 		for (var i=0; i<results.length; ++i){
-			var entry = results[i];
-			
-			var rendered = Mustache.render(template_search, entry);
+
+			var entrybox = results[i];
+			// entrybox similar to daybox - {'entries':[entry]}
+  			entry_common_computations(entrybox.entries); // this alters the entry
+  			
+			var rendered = Mustache.render(template, entrybox);
   			
   			mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
   			mainContentDiv.append('<div class="empty-box"></div>');
 			
 		}
+
 		mainContentDiv.find('.empty-box').html('<div id="div-load-more"></div>');
 		$('#div-load-more').append('<a class="load-more-click">Load >></a>');
 			
@@ -500,10 +522,12 @@ $(document).ready(function(){
 	}
 
 	var search_ajax_tag = function(tag, cursor){
+		ntag = tag.toLowerCase().replace(/ /g, '')
+		processing = true;
 		$.ajax({
 			url: '/searchtags',
-			type: 'GET',
-			data: {'tag': tag, 'cursor': cursor},
+			type: 'POST',
+			data: {'tag': ntag, 'cursor': cursor},
 			dataType: 'json',
 			success: function(search_results){
 				display_search_results(search_results, tag);
@@ -515,12 +539,56 @@ $(document).ready(function(){
 		}); 
 	}
 
+	var min = function(a,b){
+		return a<b?a:b;
+
+	}
+	// render the retrieved projects in the div in homepage
+	var list_projects = function(projects, all) {
+		var projs = projects.pbox;
+		var pro_limit = 6;
+		if (all)
+			pro_limit = 100;
+
+		var ul = $('#projects-panel').find('.left-panel-ul');
+		for(var i=0; i<min(projs.length,pro_limit); ++i) {
+			var p = projs[i];
+			ul.append('<li><a data-pid=' + p.project + '>' + p.projectName+'</a></li>');
+		}
+
+		if (projs.length > pro_limit){
+			ul.append('<a id="load-more-projects" style="font-size:12px;color:#777;">...show all</a>');
+			$('#load-more-projects').on('click', function(){
+				ul.empty();
+				ul.append('<li><a class="left-panel-link-highlight">All</a></li>');
+				ajax_projects(true);
+			});
+		}
+	}
+	// if all is True, return all projects in alphabetic order
+	// o/w return top 7 projects
+	var ajax_projects = function(all){
+
+		$.ajax({
+			url: '/ajaxprojects',
+			type: 'GET',
+			data: {'all':all},
+			dataType: 'json',
+			success: function(projects){
+				list_projects(projects, all);
+			},
+			error: function(e){
+				alert('Server Error: Project Retrieval Failed' + e);
+			}
+		}); 
+	}
+
     // make ajax call only from home page
     if (mainContentDiv.length > 0){ // if $(#json-div) is present
 		make_ajax_call();
-	
+		ajax_projects();
 	}
-	
+
 
 /*	var ajax_not_fired = true;
 	$(window).scroll(function(){
@@ -567,13 +635,11 @@ $(document).ready(function(){
   	$('#search-button').click(function(){
   		var tag = $('#search-input').val();
   		tag = tag.trim();
-  		tag = tag.toLowerCase().replace(/ /g, '')
   		if (tag && !processing){
   			// make sure that there is already no ajax request running behind the scenes
   			mainContentDiv.empty();
 			summary_state = 'search';
-			processing = true;
-			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
   			search_ajax_tag(tag);
   		}
   	});
@@ -696,6 +762,7 @@ $(document).ready(function(){
 
 	$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+	  $('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $(this).addClass('left-panel-link-highlight');	
 	});
 
@@ -718,12 +785,27 @@ $(document).ready(function(){
 				render_content(0);
 			}
 		}
+
 	});
 
-
-	$('#project-panel').find('li').on('click', 'a', function(){
-		$('#project-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+	// on() works for dynamically added contents  but click() doesn't
+	$('#projects-panel').on('click', 'a', function(){
+		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+		$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 		$(this).addClass('left-panel-link-highlight');	
+		var pid = $(this).data('pid');
+		var project = $(this).text();
+		//alert(project+' '+pid);
+		if(!pid) { // or project === 'All'
+			$('#summary-daily').click();
+		}
+		else{
+			mainContentDiv.empty();
+			summary_state = 'search';
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+
+			search_ajax_tag(project);
+		}
 	});
 
 	$('#star-panel').on('click', function(){	
@@ -751,6 +833,7 @@ $(document).ready(function(){
 	//----------- Code for data.html ---------------------//
 	//---------------------------------------------------//
 
+
   //-------- Fill the current date and previous 7 dates in data and event
   //as soon as page is loaded	---------------//
   var date = new Date(); // today
@@ -777,24 +860,24 @@ $(document).ready(function(){
   }
 
 
-  // for changing text in dropdown button
-  // callback - should execute only after dates are set
-  // but this should come only after setting dates in the form in data and event
-  var set_listener = function(){
-
-    $('.select-dropdown-menu a').on('click', function(){   //hack for mobiles included
+     // for changing text in dropdown button
+     // but this should come only after setting dates in the form in data and event
+   	// not necessary as we are using on('a') rather than click() function
+    $('.select-dropdown-menu').on('click', 'a', function(){   //hack for mobiles included
     	  $(this).parent().parent().parent().find('button')
     	  	.html($(this).html() + '<span class="caret"></span>');    
 		});
 
-    $('.project-dropdown-menu a').on('click', function(){   //we need to copy data-pid aswell
+
+    // The projects were set in the jinja template
+    // we will change this so as to retrieve the data through ajax calls
+    $('.project-dropdown-menu').on('click', 'a', function(){   //we need to copy data-pid aswell
     	  var b = $(this).parent().parent().parent().find('button');
     	  b.html( $(this).html() + '<span class="caret"></span>' );    
     	  b.data( 'pid', $(this).data('pid') );
 		});
 
-  } // ---End of set_listener -------//
-  set_listener();
+ 
 
 		
 		// for changing star colour in data entry
