@@ -16,7 +16,7 @@ $(document).ready(function(){
   projs = []; // list of all projects
 
   // function to extract sentences out of html (string)
-  // similar to innertextcontent() function
+  // similar to textContent() function
   var innerSentences = function(html_string){
   	var match, 
   		sentences = [],
@@ -34,9 +34,9 @@ $(document).ready(function(){
   	return sentences;
   }
 
-  // input is an html string
+  // input is html  - NO - now changed to a textContent string
   var formShortNotes = function(html_string, note_limit){
-  	 var sentences = innerSentences(html_string),
+  	 /*var sentences = innerSentences(html_string),
   	     words_count = 0,
   	     short_sentence = '';
 
@@ -54,7 +54,8 @@ $(document).ready(function(){
   	 		short_sentence += s + stop + ' ';
   	 	}
   	 		
-  	 }
+  	 }*/
+  	 var short_sentence = html_string.slice(0,note_limit);
   	 return short_sentence + '..<a class="show-more-notes">(more)</a>';
   }
 
@@ -76,6 +77,7 @@ $(document).ready(function(){
 
   	// extract relevant portions of a note to make summary
   	// for the timebeing, just take the first sentence.
+  	// was used in weekly summary - not used now!
   	var findSummaryFromNotes = function(note){
   		var regex = /\<\/*(?:div|li|ul|ol|b|u|i|br\/|br|\.|span style\=\"\")\>/;
   		var pos = note.search(regex);
@@ -285,18 +287,20 @@ $(document).ready(function(){
 			entry['ismz'] = (m === 0);
 
 			var notes = entry['notes'],
-				note_word_limit = 30, // first 30 words
-				note_char_limit = 120,
-				isnotebig = true;
+				note_limit = 300, //  #characters not including html tags
+				isnotebig = false;
 
-			if (!entry['shortnotes'])	
-				isnotebig = notes.length > note_char_limit;
-
+			if (!entry['shortnotes'])	// the entry is not altered already
+				var input1 = document.createElement("div");
+				input1.innerHTML = notes;
+				notes_text = input1.textContent;
+				isnotebig = notes_text.length > note_limit;
+				if (isnotebig) 
+				entry['shortnotes'] = formShortNotes(notes_text, note_limit);
 					
 			entry['isnbig'] = isnotebig;
 
-			if (isnotebig && !entry['shortnotes']) 
-				entry['shortnotes'] = formShortNotes(notes, note_word_limit);
+			
 
   		}
 
@@ -337,8 +341,9 @@ $(document).ready(function(){
   				// attach to the DOM
   				// insert to the daily-box empty-box for smooth loading without jumps
   				mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
-  				MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
   				mainContentDiv.append('<div class="empty-box"></div>');
+  				if (window.MathJax && MathJax.Hub)
+  					MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
   			}
 
@@ -365,7 +370,7 @@ $(document).ready(function(){
 	
 	}
 
-	// date1 - 'Jul 6 2015' date2 - 'Jul 12 2015' return true
+/*	// date1 - 'Jul 6 2015' date2 - 'Jul 12 2015' return true
 	var in_the_same_week = function(date1, date2){
 		var week_start_date = new Date(date1),
   			week_end_date = new Date(date1),
@@ -379,7 +384,7 @@ $(document).ready(function(){
   	    else
   	    	return false;
 	}
-
+*/
  	var append_data_and_render = function(received_data){
  		// jsdata is the available global data
  		var offset = 0;
@@ -507,9 +512,16 @@ $(document).ready(function(){
   			
   			mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
   			mainContentDiv.append('<div class="empty-box"></div>');
-  			MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+  			if (window.MathJax && MathJax.Hub)
+  				MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+
 			
 		}
+			
+		$('a.show-more-notes').on('click', function(){
+			$(this).closest('.short-note').css("display", "none");
+			$(this).closest('.short-note').siblings('.full-note').css("display", "inline");
+		});
 
 		mainContentDiv.find('.empty-box').html('<div id="div-load-more"></div>');
 		$('#div-load-more').append('<a class="load-more-click">Load >></a>');
@@ -557,16 +569,16 @@ $(document).ready(function(){
 		var ul = $('#projects-panel').find('.left-panel-ul');
 		for(var i=0; i<min(projs.length,pro_limit); ++i) {
 			var p = projs[i];
-			ul.append('<li><a data-pid=' + p.project + '>' + p.projectName+'</a></li>');
+			ul.append('<li><a data-pid=' + p.projectId + '>' + p.projectName+'</a></li>');
 		}
 
 		if (projs.length > pro_limit){
-			ul.append('<a id="load-more-projects" style="font-size:12px;"> ... show all</a>');
+			ul.append('<div id="load-more-projects-div"><a id="load-more-projects"> +More+</a></div>');
 			$('#load-more-projects').on('click', function(){
 				for(i=pro_limit; i<projs.length; ++i){
 					$('#load-more-projects').css('display', 'none');
 					var p = projs[i];
-					ul.append('<li><a data-pid=' + p.project + '>' + p.projectName+'</a></li>');
+					ul.append('<li><a data-pid=' + p.projectId + '>' + p.projectName+'</a></li>');
 				}
 
 			});
@@ -871,7 +883,8 @@ $(document).ready(function(){
 	}); */
 
 	// on() works for dynamically added contents  but click() doesn't
-	$('#projects-panel').on('click', 'a', function(){
+	// shouldn't be invoked for ...show all which doesn't have an li
+	$('#projects-panel').on('click', 'li a', function(){
 		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 		$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 		$(this).addClass('left-panel-link-highlight');	
@@ -961,6 +974,22 @@ $(document).ready(function(){
     	  var b = $(this).parent().parent().parent().find('button');
     	  b.html( $(this).html() + '<span class="caret"></span>' );    
     	  b.data( 'pid', $(this).data('pid') );
+    	  b.data('pname', $(this).data('pname'));
+    	  //alert(b.data('pname'));
+    	  b.data('isprod', $(this).data('isprod'));
+    	  var tag = b.data('pname'),
+    	  	  t = '<div class="tags-added">'+tag+'</div>',
+		  	  ts = $('#tag-section');
+		 
+		  	var tag_data = ts.data('tags'); // This is a list. Initially []
+		  	// No repeated tags allowed!
+		  	if(!(findtag(tag_data, tag))){
+		  		ts.find('.tags-added')[0].remove(); // remove the last project name
+		  		ts.prepend(t);
+		  		tag_data = [tag].concat(tag_data.slice(1));
+		  		ts.data('tags', tag_data);
+		  	}
+    	  //$('#tag-section').html('<div class="tags-added">'+tag+'</div>')
 		});
 
  
@@ -1089,13 +1118,27 @@ $(document).ready(function(){
   	input1.setAttribute("name", "formkind");
   	input1.value = "work";
   	form.appendChild(input1);
-  	// input2 is project name
+  	// input2 is project id
   	var input2 = document.createElement("input");
   	input2.setAttribute("type", "hidden");
   	input2.setAttribute("name", "project");
   	//input2.value = $('#work-form-button')[0].innerText;
   	input2.value = $('#work-form-button').data('pid');
   	form.appendChild(input2);
+  	// project name
+  	var input21 = document.createElement("input");
+	input21.setAttribute("type", "hidden");
+  	input21.setAttribute("name", "pname");
+  	//input2.value = $('#work-form-button')[0].innerText;
+  	input21.value = $('#work-form-button').data('pname');
+  	form.appendChild(input21);  	
+  	// is project productive - to avoid datastore access
+  	var input22 = document.createElement("input");
+  	input22.setAttribute("type", "hidden");
+  	input22.setAttribute("name", "isprod");
+  	//input2.value = $('#work-form-button')[0].innerText;
+  	input22.value = $('#work-form-button').data('isprod');
+  	form.appendChild(input22);
   	// date
   	var input3 = document.createElement("input");
   	input3.setAttribute("type", "hidden");
@@ -1158,7 +1201,7 @@ $(document).ready(function(){
   	input3.setAttribute("name", "date");
   	// first date is "Wed Jun 2015 - Today"
   	// strip off the Today with slice
-  	input3.value = $('#date-form-button-event')[0].text().slice(0,15);
+  	input3.value = $('#date-form-button-event').text().slice(0,15);
   	form.appendChild(input3);
   	// Achievement Star
   	var input6 = document.createElement("input");

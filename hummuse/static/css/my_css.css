@@ -1,6 +1,7 @@
 
 a:hover{
   cursor: pointer;
+  text-decoration: none;
 }
 
 /* @font-face {
@@ -10,11 +11,50 @@ a:hover{
 */
 
 body{
-	margin-top: 70px;
 	font-family:  "Palatino Linotype", serif; /*georgia*/
 	font-size: 16px;
   overflow-y: scroll;
 }
+
+body.leave-fixed-space{
+  margin-top: 70px;
+}
+
+/******* begin of welcome.css ***********/
+
+#welcome-top-section{
+  background-image: url('../images/background-sunrise.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  height: 100%;
+  color: white;
+  padding-top: 30px;
+}
+
+#company-name{
+  display: inline-block;
+}
+
+.personal-dashboard{
+  font-size: 18px;  
+  text-align: right;
+}
+
+
+.signup-heading{
+  font-size: 20px;
+  margin-bottom: 20px;
+  padding: 10px;
+  margin-top: 70px;
+}
+
+.signup-content{
+  padding: 10px;
+  font-size: 20px;
+}
+
+/******* end of welcome.css ***********/
+
 
  .modal-open { /* overwrite the default to prevent body from jumping left 17px */
   overflow-y: scroll;
@@ -164,10 +204,6 @@ body{
 .theme-color{
   color: #5cb85c; /*bootstrap green*/
 }
-#leftpanel-add-event{
-  margin-left: -8px;
-  margin-top: 10px;
-}
 
 .link-panel a:hover{
   text-decoration: none;
@@ -234,6 +270,17 @@ body{
 
 #projects-panel{
   margin-top: 27px;
+}
+
+#load-more-projects-div{
+  width: 100%;
+}
+
+#load-more-projects{
+  display: inline-block;
+  margin-left: 30%;
+  font-size:13px;
+  font-family: Times;
 }
 
 .add-near-project{

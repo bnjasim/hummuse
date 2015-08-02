@@ -159,7 +159,8 @@ class AddProjectHandler(Handler):
 
 def make_projects_dict(p):
 	
-	return {'projectName': p.projectName, 'project': p.key.id(),
+	return {'projectName': p.projectName, 
+			'projectId': p.key.id(),
 			'projectDesc': p.projectDescription,
 			'projectActive': p.projectActive,
 			'projectProductive': p.projectProductive,
@@ -300,28 +301,31 @@ class MakeEntryHandler(Handler):
 			# convert space seperated string to list of strings
 			#logging.error(self.request.get('tags'))
 			tags = str(urllib.unquote(self.request.get('tags'))).split(',')
-			
+			if len(tags) > 10:
+				tags = []
 
 			#logging.error(self.request.get('formkind'))
 			formkind = str( (self.request.get('formkind') ) ) 
 			if formkind == 'work':
 				# project id
 				project = int( self.request.get('project') )
+				projectName = self.request.get('pname')
+				isproductive = self.request.get('isprod') == 'true'
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
-				projectObject = projectKey.get()
-				projectName = projectObject.projectName;
-				isWorkProductive = projectObject.projectProductive
+				#projectObject = projectKey.get()
+				#projectName = projectObject.projectName;
+				#isproductive = projectObject.projectProductive
 				# working time
 				h = self.request.get('hours', default_value=0)
 				m = self.request.get('minutes', default_value=0)
-				logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
+				#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
 				hours = int(h) + int(m)/60.0
 
 				entry.update({'parent': user_ent_key,
 						 	'datakind': formkind,
 						 	'project': projectKey, 
 						 	'projectName': projectName,
-						 	'isWorkProductive': isWorkProductive,
+						 	'isWorkProductive': isproductive,
 						 	'notes': notes,
 						 	'date':  ndb_date,	
 						 	'hoursWorked': hours,

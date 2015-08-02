@@ -6,7 +6,7 @@
   <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css"/>
   <link rel="stylesheet" type="text/css" href="static/css/my_css.css"/>
 </head>
-<body>
+<body class="leave-fixed-space">
 
 
   <div class="navbar-fixed-top navbar-default my-font-heading" id= "my-fixed-top">
@@ -143,12 +143,12 @@
       </label>
       <div class="col-md-8">
         <div class="btn-group select-button" tabindex="1">
-          <button type="button" id="work-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown" data-pid="{{projects[0].key.id()}}">
+          <button type="button" id="work-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown" data-pid="{{projects[0].key.id()}}" data-pname="{{projects[0].projectName}}" data-isprod="{{projects[0].projectProductive}}">
             {{projects[0].projectName}} <span class="caret"></span>
           </button>
           <ul class="dropdown-menu project-dropdown-menu" role="menu">
             {% for p in projects %}
-              <li><a data-pid="{{p.key.id()}}"> {{p.projectName}} </a><li>
+              <li><a data-pid="{{p.key.id()}}" data-pname="{{p.projectName}}" data-isprod="{{p.projectProductive}}"> {{p.projectName}} </a><li>
             {% endfor %}
           </ul>
         </div>
@@ -328,8 +328,8 @@
       <label class="control-label col-md-2" for="event-tag-input-text">
         <div class="data-highlight">Tags</div>
       </label>
-      <div class="col-md-8" id="event-tag-section" data-tags="[]">
-      
+      <div class="col-md-8" id="event-tag-section" data-tags="[event]">
+          <div class="tags-added">event</div>
       </div>  
       <br/>
       <br/>
