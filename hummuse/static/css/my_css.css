@@ -16,8 +16,8 @@ body{
   overflow-y: scroll;
 }
 
-.modal-open { /* overwrite the default to prevent body from jumping left 17px */
-  overflow: visible;
+ .modal-open { /* overwrite the default to prevent body from jumping left 17px */
+  overflow-y: scroll;
   padding-right: 0 !important;
 }
 
@@ -129,8 +129,14 @@ body{
   border-bottom: 6px solid transparent;
 }
 
+
+.required:after { content:" *"; }
+.required{
+  color: red;
+}
+
 .panel-content{
-  margin-bottom: 20px;
+  margin-top: 11px;
   font-family: Helvetica, Arial, Verdana, sans-serif;
 }
 .panel-header{
@@ -167,11 +173,6 @@ body{
   text-decoration: none;
 }
 
-.left-panel-first{
-  margin-top: 11px;
-  font-family: Helvetica, Arial, Verdana, sans-serif;
-  margin-bottom: 12px;
-}
 
 .left-panel{
   font-size: 14px;
@@ -229,6 +230,10 @@ body{
   background-color: #f5f5f5;
   border-radius: 2px;
   /* cyan- background-color: #E6FFF6;*/
+}
+
+#projects-panel{
+  margin-top: 27px;
 }
 
 .add-near-project{
@@ -420,11 +425,22 @@ a.load-more-click:hove{
 
 }
 
+#add-project-footer-div{
+  display: inline-block;
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+}
+#add-project-footer-div span{
+  color: red;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 
 
 .modal-center{
   position: absolute;
-  top: 20%;
+  top: 10%;
   margin: 0;
 }
 
@@ -477,6 +493,10 @@ a.load-more-click:hove{
   text-transform: uppercase;
   letter-spacing: .1px;
   font-weight: 600; 
+}
+
+.my-last-form-group{
+  margin-top: -10px;
 }
 
 .my-form-group{
@@ -613,6 +633,6 @@ label{
 }
 
 
-#project-description{
+#add-project-description{
   height: 70px;
 }

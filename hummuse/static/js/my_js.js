@@ -9,10 +9,11 @@ $(document).ready(function(){
   var weeks_loaded = 0; // how many weeks have already been rendered 
   var template = $('#template').html();
   var mainContentDiv = $('#json-div');
-  // summary state can be changed to weekly and back to daily
-  var summary_state = 'daily';
+  // page state can be changed to projects/dash board etc.
+  var page_state = 'all';
   var search = {}; // keep details such as cursor_id, more etc.
   var processing = false; // is another ajax search is going on
+  projs = []; // list of all projects
 
   // function to extract sentences out of html (string)
   // similar to innertextcontent() function
@@ -62,7 +63,7 @@ $(document).ready(function(){
 
   		if($('#div-load-more')){
   			var a = $('#div-load-more').children();
-  			a.text('Done!');
+  			a.text('');
   			a.css('color', '#777');
   			a.css('text-decoration', 'none');
   			a.css('cursor', 'default')
@@ -85,7 +86,7 @@ $(document).ready(function(){
   	// function to combine a week long data into a weekbox similar in structure to a daybox
   	// called from reformat_data_to_weekly() function
   	// a weekbox [{date:date, project:hummuse, notes:notes...}, {date:date, project:datascience,},{}..]
-  	var mashup_week_projects = function(temp_week){
+/*  	var mashup_week_projects = function(temp_week){
   		// temp_week is an array of dayboxes
   		var weekentries = []; // to return
   		var hashproj = {};
@@ -255,7 +256,7 @@ $(document).ready(function(){
   		return weekly_data;
   	}
 
-
+*/
   	// common to search tag and daily,weekly display 
   	// computes hrs of work, short notes etc..
   	var entry_common_computations = function(entries){
@@ -309,10 +310,10 @@ $(document).ready(function(){
   		  	// if weekly, reformat the data to have new dailyboxes 
   			// (actually weeklyboxes) but we will call dailybox itself
   			var formatted_data = data;
-  			if (summary_state === 'weekly') {
+  		/*	if (summary_state === 'weekly') {
   				formatted_data = reforamt_data_to_weekly(data);
   				weeks_loaded = formatted_data.length;
-  			}
+  			} */
 
   			for(var i=offset; i<formatted_data.length; ++i){
   				var daybox = formatted_data[i]; // we are rendering this json/js data structure
@@ -336,6 +337,7 @@ $(document).ready(function(){
   				// attach to the DOM
   				// insert to the daily-box empty-box for smooth loading without jumps
   				mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
+  				MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
   				mainContentDiv.append('<div class="empty-box"></div>');
 
   			}
@@ -385,6 +387,9 @@ $(document).ready(function(){
  			data_old = jsdata['data'];
 
  		if (data_new.length === 0){
+ 			if ($('.initial-loading-container'))
+ 				$('.initial-loading-container').remove();
+
  			finished_load();
  			return;
  		}	
@@ -406,10 +411,10 @@ $(document).ready(function(){
  				// no overlap - just append 
  				jsdata.data = data_old.concat(data_new);
 
- 				if (summary_state === 'daily')
+ 				if (page_state === 'all')
  					offset = data_old.length;
 
- 				else if (summary_state === 'weekly'){
+ 				/*else if (summary_state === 'weekly'){
  					// if in the same week, more complex
  					if (in_the_same_week(date1, date2)){
  						if (weeks_loaded > 0)
@@ -420,7 +425,7 @@ $(document).ready(function(){
  					else {
  						offset = weeks_loaded;
  					}
- 				}
+ 				} */
 
  			}	
 
@@ -435,18 +440,18 @@ $(document).ready(function(){
  				// then append the received data to jsdata except for the first day-box
  				jsdata.data = jsdata.data.concat(data_new.slice(1));
 
- 				if (summary_state === 'daily'){
+ 				if (page_state === 'all'){
  					// remove the last daily-box from the DOM
  					$('.daily-box').last().remove();
  					offset = data_old.length - 1;
  				}
 
- 				else if (summary_state === 'weekly'){
+ 			/*	else if (summary_state === 'weekly'){
  					// just remove last weeklybox and re-render
  					$('.daily-box').last().remove();
  					if (weeks_loaded > 0)
  						offset = weeks_loaded - 1;
- 				}
+ 				} */
 
  			}
 
@@ -502,6 +507,7 @@ $(document).ready(function(){
   			
   			mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
   			mainContentDiv.append('<div class="empty-box"></div>');
+  			MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 			
 		}
 
@@ -544,11 +550,9 @@ $(document).ready(function(){
 
 	}
 	// render the retrieved projects in the div in homepage
-	var list_projects = function(projects, all) {
-		var projs = projects.pbox;
+	var list_projects = function(projects) {
+		projs = projects.pbox;
 		var pro_limit = 6;
-		if (all)
-			pro_limit = 100;
 
 		var ul = $('#projects-panel').find('.left-panel-ul');
 		for(var i=0; i<min(projs.length,pro_limit); ++i) {
@@ -557,25 +561,26 @@ $(document).ready(function(){
 		}
 
 		if (projs.length > pro_limit){
-			ul.append('<a id="load-more-projects" style="font-size:12px;color:#777;">...show all</a>');
+			ul.append('<a id="load-more-projects" style="font-size:12px;"> ... show all</a>');
 			$('#load-more-projects').on('click', function(){
-				ul.empty();
-				ul.append('<li><a class="left-panel-link-highlight">All</a></li>');
-				ajax_projects(true);
+				for(i=pro_limit; i<projs.length; ++i){
+					$('#load-more-projects').css('display', 'none');
+					var p = projs[i];
+					ul.append('<li><a data-pid=' + p.project + '>' + p.projectName+'</a></li>');
+				}
+
 			});
 		}
 	}
-	// if all is True, return all projects in alphabetic order
-	// o/w return top 7 projects
-	var ajax_projects = function(all){
+	// return all projects in last accessed first order
+	var ajax_projects = function(){
 
 		$.ajax({
 			url: '/ajaxprojects',
 			type: 'GET',
-			data: {'all':all},
 			dataType: 'json',
 			success: function(projects){
-				list_projects(projects, all);
+				list_projects(projects);
 			},
 			error: function(e){
 				alert('Server Error: Project Retrieval Failed' + e);
@@ -638,7 +643,7 @@ $(document).ready(function(){
   		if (tag && !processing){
   			// make sure that there is already no ajax request running behind the scenes
   			mainContentDiv.empty();
-			summary_state = 'search';
+			//summary_state = 'search';
 			mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
   			search_ajax_tag(tag);
   		}
@@ -647,13 +652,89 @@ $(document).ready(function(){
 
 
 	//--------------Projects--------------------//
+	var alreadyExistingProject = function(p){
+		// check if p is present in projs
+		// convert p is already in lowercase no spaces
+		for (var i=0; i<projs.length; ++i){
+			var proj = projs[i].projectName.toLowerCase().trim().replace(/ /g, '');
+			if (p === proj)
+				return true;
+		}
 
-	// On submit disable the button-
-	// to prevent multiple submissions
- 	$('#project-submit-button').on('click', function(){
- 		$(this).prop('disabled', true);
- 		$(this).closest('form')[0].submit();
+		return false;
+	}
+
+	// On submit disable the button
+	// error handling and then submitting
+ 	$('#add-project-submit').on('click', function(){
+
+ 		var projectName = $('#add-project-input').val().trim().replace(/\s+/g, ' ');
+ 		var p = projectName.replace(/ /g, '').toLowerCase();
+ 		// if projectName is not empty
+ 		if (p.length > 0){
+ 			// check if project name already exists in projs
+ 			if (!alreadyExistingProject(p)){
+ 				$('#add-project-footer-div').css('left', '40%');
+ 				$('#add-project-footer-div').html('<img src="static/images/load-small.gif" alt="processing...">');
+	 			$(this).prop('disabled', true);
+ 				$('#add-project-cancel').prop('disabled', true);
+ 				$('#add-project-close').prop('disabled', true);
+ 				// retrieve data and submit using ajax
+ 				var projectDescription = $('#add-project-description').val();
+ 				// need to use javascript for checked property - jquery doesn't seem to work
+ 				var projectProductive = $('#add-project-productive')[0].checked; // true or false
+ 				$.ajax({
+					url: '/addproject',
+					type: 'POST',
+					dataType: 'json',
+					data: {'pname':projectName, 'pdesc':projectDescription, 'pprod':projectProductive},
+					success: function(res){
+						$('#add-project-submit').prop('disabled', false);
+ 						$('#add-project-cancel').prop('disabled', false);
+ 						$('#add-project-close').prop('disabled', false);
+ 						var fdiv = $('#add-project-footer-div').css('left', '10px')
+ 						if (res.response > 0) // already exists
+ 							fdiv.html("<span class='glyphicon glyphicon-remove-circle'></span>Project Already Exists");
+ 						
+ 						else { // success
+ 							// empty projectName and description
+ 							$('#add-project-input').val('');
+ 							$('#add-project-description').val('');
+ 							$('#add-project-productive')[0].checked = true;
+ 							// update the projs 
+ 							// display success message at the footer and close the modal
+ 							fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Project Added Successfully").find('span').css('color','green');
+ 							setTimeout(function(){ $('#add-project-modal').modal('hide'); }, 1600);
+ 						}
+
+					},
+					error: function(e){
+						$('#add-project-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Error: Couldn't add the Project");						
+					}
+				}); 
+
+
+ 			}
+
+ 			else{
+ 				
+ 				$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name already exists");	
+ 			}
+ 		}
+ 		
+ 		else {
+ 			$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name can't be empty");
+ 		}
+
  	});
+
+ 	$('#add-project').on('click', function(){
+ 		$('#add-project-footer-div').empty(); // remove warnings from modal
+		$('#add-project-modal').modal({backdrop:'static', keyboard:false});
+	});
+
+
+
 
  	//--------END of Projects---------------------//
  	
@@ -760,13 +841,14 @@ $(document).ready(function(){
 
 // --------Home Page -----------------------//
 
+	
 	$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $(this).addClass('left-panel-link-highlight');	
 	});
 
-	$('#summary-weekly').on('click', function(){
+	/*$('#summary-weekly').on('click', function(){
 		if (summary_state !== 'weekly') {
 			summary_state = 'weekly';
 			if (jsdata['data']) { // don't do anything if first data has not arrived
@@ -786,7 +868,7 @@ $(document).ready(function(){
 			}
 		}
 
-	});
+	}); */
 
 	// on() works for dynamically added contents  but click() doesn't
 	$('#projects-panel').on('click', 'a', function(){
@@ -797,11 +879,15 @@ $(document).ready(function(){
 		var project = $(this).text();
 		//alert(project+' '+pid);
 		if(!pid) { // or project === 'All'
-			$('#summary-daily').click();
+			if (jsdata['data']) {// don't do anything before first data has arrived
+				mainContentDiv.empty();
+				mainContentDiv.append('<div class="empty-box"></div>');
+				render_content(0);
+			}
 		}
 		else{
 			mainContentDiv.empty();
-			summary_state = 'search';
+			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
 
 			search_ajax_tag(project);
@@ -841,8 +927,8 @@ $(document).ready(function(){
   event_form_dropdown_menu = $('#date-form-button-event').siblings('.select-dropdown-menu')[0];
   // Execute the code only for data.html not for project.html etc.
   if(data_form_dropdown_menu) {
-    $('#date-form-button')[0].innerText = date.toDateString() + ' - Today';
-    $('#date-form-button-event')[0].innerText = date.toDateString() + ' - Today';
+    $('#date-form-button').text(date.toDateString() + ' - Today');
+    $('#date-form-button-event').text(date.toDateString() + ' - Today');
 
     for(var j=0; j<38; ++j){
   	  var temp_li = document.createElement("li");
@@ -1016,19 +1102,19 @@ $(document).ready(function(){
   	input3.setAttribute("name", "date");
   	// first one is "Wed Jun 2015 - Today"
   	// strip off the Today with slice
-  	input3.value = $('#date-form-button')[0].innerText.slice(0,15);
+  	input3.value = $('#date-form-button').text().slice(0,15);
   	form.appendChild(input3);
   	// hours
   	var input4 = document.createElement("input");
   	input4.setAttribute("type", "hidden");
   	input4.setAttribute("name", "hours");
-  	input4.value = $('#form-working-hours')[0].innerText;
+  	input4.value = $('#form-working-hours').text();
   	form.appendChild(input4);
 	// minutes
   	var input5 = document.createElement("input");
   	input5.setAttribute("type", "hidden");
   	input5.setAttribute("name", "minutes");
-  	input5.value = $('#form-working-minutes')[0].innerText;
+  	input5.value = $('#form-working-minutes').text();
   	form.appendChild(input5);
   	// Achievement Star
   	var input6 = document.createElement("input");
@@ -1048,7 +1134,7 @@ $(document).ready(function(){
   	input8.setAttribute("name", "tags");
   	input8.value = $('#tag-section').data('tags');
   	form.appendChild(input8);
-
+  	//alert('hours='+input4.value+' min='+input5.value);
   	//form.setAttribute("method","get");
   	form.submit();
 
@@ -1072,7 +1158,7 @@ $(document).ready(function(){
   	input3.setAttribute("name", "date");
   	// first date is "Wed Jun 2015 - Today"
   	// strip off the Today with slice
-  	input3.value = $('#date-form-button-event')[0].innerText.slice(0,15);
+  	input3.value = $('#date-form-button-event')[0].text().slice(0,15);
   	form.appendChild(input3);
   	// Achievement Star
   	var input6 = document.createElement("input");

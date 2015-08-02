@@ -133,7 +133,7 @@ class AddProjectHandler(Handler):
 		
 		user = users.get_current_user()
 		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
+			self.redirect(users.create_login_url('/welcome'))
 			
 		else:
 			user = users.get_current_user()
@@ -157,12 +157,80 @@ class AddProjectHandler(Handler):
 				self.redirect(format('/project?warning=Project Title is too short&pnotes='+str(pNotes)))
 
 
+def make_projects_dict(p):
+	
+	return {'projectName': p.projectName, 'project': p.key.id(),
+			'projectDesc': p.projectDescription,
+			'projectActive': p.projectActive,
+			'projectProductive': p.projectProductive,
+			'projectShared': p.projectShared,
+			'projectLastHour': p.projectLastHour,
+			'projectEntriesNo': p.projectEntriesNo
+			}
+
+
+# returns the list of all projects			
+class AjaxProjectsHandler(Handler):
+
+	def get(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			user_id = user.user_id()
+			user_ent_key = ndb.Key(Account, user_id)
+
+			pbox = []
+
+			qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
+			all_projects = qry.fetch()
+			for p in all_projects:
+				pbox.append(make_projects_dict(p))
+
+			
+			projects = {'pbox': pbox}		
+			self.response.out.write(json.dumps(projects))		
+
+
+# through Ajax POST request
+class AddProjectAjax(Handler):
+	def post(self):
+		
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/welcome'))
+			
+		else:
+			user = users.get_current_user()
+			user_ent_key = ndb.Key(Account, user.user_id())	
+			pName = self.request.get('pname')
+			logging.error(pName)
+			pDesc = self.request.get('pdesc')
+			pProd = self.request.get('pprod') == 'true'
+			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
+			all_projects = list(p_cursor)
+			all_projects_name = [p.projectName for p in all_projects]
+			if (pName):
+				if (pName not in all_projects_name):
+					pro = Projects(parent = user_ent_key, 
+								   projectName=pName, 
+								   projectDescription=pDesc,
+								   projectProductive = pProd)
+					pro.put()
+					self.response.out.write(json.dumps({'response': 0})) # 0 means success
+				else:
+					self.response.out.write(json.dumps({'response': 1})) # 1 means already exists
+			else:
+				self.response.out.write(json.dumps({'response': 2})) # 2 means empty name - can't occur 
+
+
 class DeleteProjectHandler(Handler):
 	
 	def post(self):
 		user = users.get_current_user()
 		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
+			self.redirect(users.create_login_url('/welcome'))
 			
 		else:
 			user_ent_key = ndb.Key(Account, user.user_id())
@@ -244,7 +312,10 @@ class MakeEntryHandler(Handler):
 				projectName = projectObject.projectName;
 				isWorkProductive = projectObject.projectProductive
 				# working time
-				hours = int(self.request.get('hours')) + int(self.request.get('minutes'))/60.0
+				h = self.request.get('hours', default_value=0)
+				m = self.request.get('minutes', default_value=0)
+				logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
+				hours = int(h) + int(m)/60.0
 
 				entry.update({'parent': user_ent_key,
 						 	'datakind': formkind,
@@ -393,11 +464,11 @@ class AjaxHomeHandler(Handler):
 			qry = Entry.query(ancestor = user_ent_key).order(-Entry.date)	
 			entries, next_cursor, more = qry.fetch_page(20, start_cursor=start_cursor)
 
-			if cursor_id:
+			if cursor_id and next_cursor:
 				cursor_obj.cursor = next_cursor.urlsafe()
 				cursor_obj.put()
 				memcache.set(user_id+'ajax-cursor', cursor_obj, 1800)
-			else:	# refresh
+			elif next_cursor:	# refresh
 				# check whether any cursor already present
 				# otherwise we'll be recreating an OpaqueCursor entity for every refresh
 				all_cursors_query = ndb.gql("SELECT * FROM OpaqueCursor WHERE ANCESTOR IS :1", user_ent_key)
@@ -507,42 +578,7 @@ class AjaxTagsHandler(Handler):
 					results.append(entrybox) 
 
 				search_results = {"results": results, "more": more, "cursor": cur_id}
-				self.response.out.write(json.dumps(search_results))
-
-def make_projects_dict(p):
-	return {'projectName': p.projectName, 'project': p.key.id()}
-
-# returns the list of all projects			
-class AjaxProjectsHandler(Handler):
-
-	def get(self):
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect('/welcome')
-			
-		else:
-			user_id = user.user_id()
-			user_ent_key = ndb.Key(Account, user_id)
-			flag_all = self.request.get('all', default_value=False)
-
-			pbox = []
-			if flag_all:
-				# retrieve in alphabetical order
-				qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
-				all_projects = qry.fetch()
-				for p in all_projects:
-					pbox.append(make_projects_dict(p))
-
-			else:
-				# retrieve in last accessed order first 6/7 projects
-				qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
-				top_projects = qry.fetch(7)	
-				for p in top_projects:
-					pbox.append(make_projects_dict(p))
-
-			projects = {'pbox': pbox}		
-			self.response.out.write(json.dumps(projects))		
-
+				self.response.out.write(json.dumps(search_results))	
 
 
 
@@ -575,6 +611,7 @@ class UpdateHandler(Handler):
 app = webapp2.WSGIApplication([
 	('/', HomeHandler),
     ('/projects', AddProjectHandler),
+    ('/addproject', AddProjectAjax),
     ('/delproject', DeleteProjectHandler),
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),

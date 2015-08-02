@@ -98,24 +98,30 @@
   </div>
   -->
 
-  <div class="left-panel left-panel-first">
-    <a href="/projects">Projects</a>
-  </div>
+  <div class="left-panel panel-content">
+    <a>Dash Board</a>
+  </div> 
 
-  <div class="panel-content left-panel">
-    <a>Tags</a>
+  <div class="left-panel panel-content">
+    <a id="add-project">Add A Project</a>
+  </div>
+  
+  <div class="left-panel panel-content">
+    <a>Edit Projects</a>
   </div>  
 
-  <div class="panel-content" id="summary-panel">	
+ 
+
+  <!--<div class="panel-content" id="summary-panel">	
 	<div class="panel-header">Summary</div>
 	<ul class="left-panel-ul">
-	  <li><a id="summary-daily"class="left-panel-link-highlight">Daily</a></li>
+	  <li><a id="summary-daily" class="left-panel-link-highlight">Daily</a></li>
 	  <li><a id="summary-weekly">Weekly</a></li>
 	  
 	</ul>
   </div>
 
-<!--
+
   <div id="star-panel" class="link-panel">
     <div class="glyphicon glyphicon-star-empty theme-color"></div>
     <a>Special Works</a>
@@ -158,9 +164,59 @@
 </div>
 </div>
 
+<!-- Modal1 - Add Project modal -->
+  <div class="modal fade modal-center" id="add-project-modal" tabindex="-1" role="modal" aria-labelledby="add-project-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button id="add-project-close" type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <h4 class="modal-title" id="add-project-modal-label">Add A New Project</h4>
+        </div>
+        <div class="modal-body">
+          <form id="add-project-form" method="post" action="/projects" class="form-horizontal my-form-styles" role="form">  
+            <!-- Project Name -->
+            <div class="form-group my-form-group">
+              <label class="control-label col-md-2" for="add-project-input">
+                <div class="data-highlight">
+                  Name <span class="required"></span> 
+                </div>
+              </label>
+              <div class="col-md-8">
+                <input type="text" id='add-project-input' class='form-control' placeholder="Name the Project" name="pname">
+              </div>  
+            </div>    
+    
+            <!-- Project Description -->
+            <div class="form-group my-form-group">
+              <label class="control-label col-md-2" for="project-description">
+                <div class="data-highlight">Description</div>
+              </label>
+              <div class="col-md-8">
+                <textarea type="textarea" id='add-project-description' class='form-control'
+                placeholder="Optional" name="pdesc"></textarea>
+              </div>  
+            </div>    
+
+            <!-- Project Productive -->
+            <div class="form-group my-last-form-group">
+              <div class="col-md-8 col-md-offset-2 checkbox">
+                <label><input id="add-project-productive" type="checkbox" name="isproductive" checked> Productive</label>
+              </div>
+            </div>
+            
+          </form>
+        </div>
+        <div class="modal-footer">
+          <div id="add-project-footer-div"></div>
+          <button id="add-project-cancel" type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button id="add-project-submit" type="button" class="btn btn-success">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
-<!-- Modal1 - Timer Stop modal -->
+<!-- Modal2 - Timer Stop modal -->
   <div class="modal fade modal-center" id="stop-timer-modal" tabindex="-1" role="modal" aria-labelledby="stop-timer-modal-label" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -287,5 +343,9 @@
 <script src="static/js/bootstrap.js" type="text/javascript"></script>
 <script src="static/js/mustache.min.js" type="text/javascript"></script>
 <script src="static/js/my_js.js" type="text/javascript"></script>
+<script src="static/js/MathJax-master/MathJax.js?config=TEX-AMS_HTML" type="text/javascript"></script>
+<!-- change to this later to load from CDN - change JQuery as well
+<script src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'></script>
+-->
 </body>
 </html>
