@@ -70,10 +70,10 @@
 
 <div class="col-md-2 col-md-push-10" id="right-panel"> 
 
-  <div class="timer well" data-toggle="tooltip" title="Work Tracker" data-placement="left">
+  <div id="timer" class="well" data-toggle="tooltip" title="Work Tracker" data-placement="left">
     <div class="timer-header">
       <div id="left-caret-arrow" class="left-caret theme-color"></div>
-      <div class="truncated">Hummuse</div>
+      <div class="truncated"></div>
       <div id="right-caret-arrow" class="right-caret theme-color"></div>
     </div>
 
@@ -99,15 +99,24 @@
   -->
 
   <div class="left-panel panel-content">
-    <a>Dash Board</a>
+    <a>
+      <div class="glyphicon glyphicon-th lef-panel-icons"></div> 
+      Dash Board
+    </a>
   </div> 
 
   <div class="left-panel panel-content">
-    <a id="add-project">Add A Project</a>
+    <a id="add-project">
+      <div class="glyphicon glyphicon-plus lef-panel-icons"></div> 
+      Add A Project 
+    </a>
   </div>
   
   <div class="left-panel panel-content">
-    <a>Edit Projects</a>
+    <a>
+      <div class="glyphicon glyphicon-edit lef-panel-icons"></div> 
+      Edit Projects
+    </a>
   </div>  
 
  
@@ -121,12 +130,15 @@
 	</ul>
   </div>
 
-  
-  <div id="star-panel" class="link-panel">
-    <div class="glyphicon glyphicon-star-empty theme-color"></div>
-    <a>Special Works</a>
+-->  
+  <div id="star-panel" class="left-panel panel-content">
+    <!--<span class="glyphicon glyphicon-star-empty theme-color"></span> -->
+    <a>
+      <div class="glyphicon glyphicon-star lef-panel-icons"></div> 
+      Achievements
+    </a>
   </div>
--->
+
 
   <div class="panel-content"> 
    <div class="panel-header">Make Notes
@@ -134,11 +146,17 @@
    </div>
 
    <div class="left-panel panel-content">
-      <a id="add-work">Add Work</a>
+      <a id="add-work">
+        <div class="glyphicon glyphicon-pencil lef-panel-icons"></div> 
+        Add Work
+      </a>
    </div> 
 
    <div class="left-panel panel-content">
-      <a id="add-event">Add Event</a>
+      <a id="add-event">
+        <div class="glyphicon glyphicon-paperclip lef-panel-icons"></div> 
+        Add Event
+      </a>
    </div> 
 
   </div> 
@@ -148,10 +166,8 @@
 	 <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
 	 </div>
 	 <ul class="left-panel-ul">
-	  <li>
-	    <a class="left-panel-link-highlight">All</a>
-	  </li>
-	  <!--<li><a>Hummuse</a></li>
+	  
+	  <!--<li><a>All</a></li>
 	  <li><a>Data Science</a></li>
 	  <li><a>NLP Teaching</a></li>
 	  <li><a>Quora</a></li>
@@ -186,7 +202,10 @@
       <div class="modal-content">
         <div class="modal-header">
           <button id="add-project-close" type="button" class="close" aria-hidden="true">&times</button>
-          <h4 class="modal-title" id="add-project-modal-label">Add A New Project</h4>
+          <h4 class="modal-title" id="add-project-modal-label">
+            <div class="glyphicon glyphicon-plus modal-icons"></div> 
+            New Project
+          </h4>
         </div>
         <div class="modal-body">
           <form id="add-project-form"  class="form-horizontal my-form-styles" role="form">  
@@ -264,7 +283,10 @@
           <button id="add-work-close" type="button" class="close" aria-hidden="true">&times</button>
           
           <div class="my-modal-header-place">
-            <div class="modal-title">Work</div>
+            <div class="modal-title">
+              <div class="glyphicon glyphicon-pencil modal-icons"></div> 
+              Work
+            </div>
 
             <div id="form-work-star" class="my-big-star-form theme-color" data-value="false">
               <div class="glyphicon glyphicon-star-empty"></div>
@@ -440,7 +462,10 @@
           <button id="add-event-close" type="button" class="close" aria-hidden="true">&times</button>
           
           <div class="my-modal-header-place">
-            <div class="modal-title">Event</div>
+            <div class="modal-title">
+              <div class="glyphicon glyphicon-paperclip modal-icons"></div> 
+              Event
+            </div>
 
             <div id="form-event-star" class="my-big-star-form theme-color" data-value="false">
               <div class="glyphicon glyphicon-star-empty"></div>

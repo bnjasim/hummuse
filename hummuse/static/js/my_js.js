@@ -916,6 +916,8 @@ $(document).ready(function(){
 		var pro_limit = 6;
 
 		var ul = $('#projects-panel').find('.left-panel-ul');
+		ul.empty();
+		ul.append('<li><a class="left-panel-link-highlight">All</a></li>');
 		for(var i=0; i<min(projs.length,pro_limit); ++i) {
 			var p = projs[i];
 			ul.append('<li><a data-pid=' + p.projectId + '>' + p.projectName+'</a></li>');
@@ -933,6 +935,7 @@ $(document).ready(function(){
 			});
 		}
 	}
+
 	// return all projects in last accessed first order
 	var ajax_projects = function(){
 
@@ -943,8 +946,12 @@ $(document).ready(function(){
 			success: function(projects){
 				// show the projects in the left panel
 				list_projects_panel(projects);
+
 				// Also show in the work modal form
 				list_projects_work_form();
+
+				// in the timer header as well
+				$('#timer').find('.truncated').text(projs[0].projectName);
 
 			},
 			error: function(e){
@@ -1061,6 +1068,7 @@ $(document).ready(function(){
  				var projectDescription = $('#add-project-description').val();
  				// need to use javascript for checked property - jquery doesn't seem to work
  				var projectProductive = $('#add-project-productive')[0].checked; // true or false
+ 	
  				$.ajax({
 					url: '/addproject',
 					type: 'POST',
@@ -1079,12 +1087,14 @@ $(document).ready(function(){
  							$('#add-project-input').val('');
  							$('#add-project-description').val('');
  							$('#add-project-productive')[0].checked = true;
- 							// update the projs 
+ 							// update the projs - make a new ajax call
+ 							ajax_projects();
+							
  							// display success message at the footer and close the modal
  							fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Project Added Successfully").find('span').css('color','green');
  							setTimeout(function(){ $('#add-project-modal').modal('hide'); }, 1200);
  							// remove 17px padding from my-fixed-top navbar
- 							$('#my-fixed-top').css('padding-right', '0px');
+ 							//$('#my-fixed-top').css('padding-right', '0px');
 
  						}
 
@@ -1162,9 +1172,10 @@ $(document).ready(function(){
 	// called after the ajax call for the list of all projects
 	var list_projects_work_form = function(){
 		// we have projs	
-	    var work_form_dropdown_menu = $('#project-form-button').siblings('.project-dropdown-menu')[0];
+	    var work_form_dropdown_menu = $('#project-form-button').siblings('.project-dropdown-menu');
+	    work_form_dropdown_menu.empty();
   		// Execute the code only for data.html not for project.html etc.
-  		if(work_form_dropdown_menu) {
+  		if(work_form_dropdown_menu[0]) {
   			var b = $('#project-form-button');
   			var projectName = projs[0].projectName;
 
@@ -1176,6 +1187,7 @@ $(document).ready(function(){
     		// set the initial tag as the first project name
     		var t = '<div class="tags-added">'+projectName+'</div>',
 		  		ts = $('#tag-section');
+		  	ts.empty();	
 		  	ts.prepend(t);
 		  	ts.data('tags', [projectName]);
 		  	
@@ -1188,7 +1200,7 @@ $(document).ready(function(){
   	  			temp_a.data('isprod', projs[j].projectProductive);
   	  			
   	  			temp_li.append(temp_a);
-  	  			work_form_dropdown_menu.appendChild(temp_li[0]);
+  	  			work_form_dropdown_menu.append(temp_li);
     		}
 
 		}
@@ -1303,13 +1315,13 @@ $(document).ready(function(){
 // --------Home Page -----------------------//
 
 	
-	$('#summary-panel').find('li').on('click', 'a', function(){
+	/*$('#summary-panel').find('li').on('click', 'a', function(){
 	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 	  $(this).addClass('left-panel-link-highlight');	
 	});
 
-	/*$('#summary-weekly').on('click', function(){
+	$('#summary-weekly').on('click', function(){
 		if (summary_state !== 'weekly') {
 			summary_state = 'weekly';
 			if (jsdata['data']) { // don't do anything if first data has not arrived
@@ -1351,30 +1363,29 @@ $(document).ready(function(){
 			mainContentDiv.empty();
 			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-
 			search_ajax_tag(project);
 		}
 	});
 
-	$('#star-panel').on('click', function(){	
+	/* $('#star-panel').on('click', function(){	
 		$(this).toggleClass('left-panel-link-highlight');
 		$(this).find('div').toggleClass('glyphicon-star-empty');	
 		$(this).find('div').toggleClass('glyphicon-star');
 		
-	});
+	}); */
 
-	var project_array = ['Hummuse', 'One Wolf and two goats befriend three cows','NLP','Data Science'];
+	//var project_array = ['Hummuse', 'One Wolf and two goats befriend three cows','NLP','Data Science'];
 	var p_index = 0;
 	$('#right-caret-arrow').on('click', function(){
 		p_index += 1;
-		p_index = (p_index >= project_array.length)? 0 : p_index;
-		$(this).closest('.timer-header').find('.truncated').text(project_array[p_index]);
+		p_index = (p_index >= projs.length)? 0 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
 
 	});
 	$('#left-caret-arrow').on('click', function(){
 		p_index -= 1;
-		p_index = (p_index < 0)? project_array.length-1 : p_index;
-		$(this).closest('.timer-header').find('.truncated').text(project_array[p_index]);
+		p_index = (p_index < 0)? projs.length-1 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
 
 	});
 

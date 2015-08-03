@@ -70,7 +70,7 @@ body.leave-fixed-space{
   line-height: 20px;
 }
 
-.timer{
+#timer{
   margin-top: 20px;
   font-family: Helvetica, Arial, Verdana, sans-serif;
 }
@@ -108,7 +108,7 @@ body.leave-fixed-space{
   cursor: pointer;
 }
 @media (max-width: 991px) { /* for xtra-small and small devices */
-  .timer{
+  #timer{
     margin-top:15px;
     width: 160px;
   }
@@ -189,21 +189,26 @@ body.leave-fixed-space{
   letter-spacing: .5px;
   font-weight: 600;
 }
+
+#star-panel{
+  font-size: 14px;
+}
 #star-panel:hover{
   cursor: pointer;
 }
-.link-panel{
-  font-family: Helvetica, Arial, Verdana, sans-serif;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #57d;  
-}
-.theme-color{
-  color: #5cb85c; /*bootstrap green*/
+
+.lef-panel-icons{
+  font-size: 13px;
+  margin-right: 3px;
 }
 
-.link-panel a:hover{
-  text-decoration: none;
+.modal-icons{
+  margin-right: 5px;
+  color: #777;
+}
+
+.theme-color{
+  color: #5cb85c; /*bootstrap green*/
 }
 
 
