@@ -56,13 +56,9 @@ body.leave-fixed-space{
 /******* end of welcome.css ***********/
 
 
- .modal-open { /* overwrite the default to prevent body from jumping left 17px */
-  overflow-y: scroll;
-  padding-right: 0 !important;
-}
+
 
 #my-fixed-top {
- /* border-bottom: 15px solid #fff;*/
   margin-bottom: 15px;
 }
 
@@ -183,6 +179,7 @@ body.leave-fixed-space{
 	font-family: Helvetica, Arial, Verdana, sans-serif;
 	font-size: 11px;
 	font-weight: 500;
+  margin-top: 22px;
 	margin-bottom: 8px;
   border-bottom: 1px solid rgba(200,200,200,0.5);
   padding-bottom: 4px;
@@ -268,9 +265,6 @@ body.leave-fixed-space{
   /* cyan- background-color: #E6FFF6;*/
 }
 
-#projects-panel{
-  margin-top: 27px;
-}
 
 #load-more-projects-div{
   width: 100%;
@@ -278,7 +272,7 @@ body.leave-fixed-space{
 
 #load-more-projects{
   display: inline-block;
-  margin-left: 30%;
+  margin-left: 0%;
   font-size:13px;
   font-family: Times;
 }
@@ -290,9 +284,7 @@ body.leave-fixed-space{
   font-size: 10px;
   font-weight: 600;
 }
-.add-near-project a:hover{
-  text-decoration: none;
-}
+
 .my-font-heading{
 	font-family: Helvetica, Arial, Verdana, sans-serif;
 }
@@ -553,11 +545,10 @@ a.load-more-click:hove{
   margin-top: 4px;
 }
 .my-big-star-form{
-  font-size: 30px;
-  padding-top: 10px;
-  padding-left: 5px;
+  display: inline-block;
+  font-size: 26px;
   cursor: pointer;
-  max-width: 100px;
+  float: right;
 }
 
 label{
@@ -682,4 +673,26 @@ label{
 
 #add-project-description{
   height: 70px;
+}
+
+
+@media (min-width: 992px) {
+  .modal-my-width {
+    width: 780px;
+    margin-top: 5px !important;
+  }
+}
+
+
+.modal-title{
+  display: inline-block !important;
+  font-size: 18px;
+}
+
+.my-modal-header-place{
+  width: 83%;
+}
+
+.my-modal-footer{
+  padding: 7px 15px;
 }

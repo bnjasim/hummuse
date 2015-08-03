@@ -1,3 +1,352 @@
+/* ========================================================================
+ * Bootstrap: modal.js v3.3.4
+ * http://getbootstrap.com/javascript/#modals
+ * ========================================================================
+ * Copyright 2011-2015 Twitter, Inc.
+ * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
+ * ======================================================================== */
+
+
++function ($) {
+  'use strict';
+
+  // MODAL CLASS DEFINITION
+  // ======================
+
+  var Modal = function (element, options) {
+    this.options             = options
+    this.$body               = $(document.body)
+    this.$element            = $(element)
+    this.$dialog             = this.$element.find('.modal-dialog')
+    this.$backdrop           = null
+    this.isShown             = null
+    this.originalBodyPad     = null
+    this.scrollbarWidth      = 0
+    this.ignoreBackdropClick = false
+
+    if (this.options.remote) {
+      this.$element
+        .find('.modal-content')
+        .load(this.options.remote, $.proxy(function () {
+          this.$element.trigger('loaded.bs.modal')
+        }, this))
+    }
+  }
+
+  Modal.VERSION  = '3.3.4'
+
+  Modal.TRANSITION_DURATION = 300
+  Modal.BACKDROP_TRANSITION_DURATION = 150
+
+  Modal.DEFAULTS = {
+    backdrop: true,
+    keyboard: true,
+    show: true
+  }
+
+  Modal.prototype.toggle = function (_relatedTarget) {
+    return this.isShown ? this.hide() : this.show(_relatedTarget)
+  }
+
+  Modal.prototype.show = function (_relatedTarget) {
+    var that = this
+    var e    = $.Event('show.bs.modal', { relatedTarget: _relatedTarget })
+
+    this.$element.trigger(e)
+
+    if (this.isShown || e.isDefaultPrevented()) return
+
+    this.isShown = true
+
+    this.checkScrollbar()
+    this.setScrollbar()
+    this.$body.addClass('modal-open')
+
+    this.escape()
+    this.resize()
+
+    this.$element.on('click.dismiss.bs.modal', '[data-dismiss="modal"]', $.proxy(this.hide, this))
+
+    this.$dialog.on('mousedown.dismiss.bs.modal', function () {
+      that.$element.one('mouseup.dismiss.bs.modal', function (e) {
+        if ($(e.target).is(that.$element)) that.ignoreBackdropClick = true
+      })
+    })
+
+    this.backdrop(function () {
+      var transition = $.support.transition && that.$element.hasClass('fade')
+
+      if (!that.$element.parent().length) {
+        that.$element.appendTo(that.$body) // don't move modals dom position
+      }
+
+      that.$element
+        .show()
+        .scrollTop(0)
+
+      that.adjustDialog()
+
+      if (transition) {
+        that.$element[0].offsetWidth // force reflow
+      }
+
+      that.$element
+        .addClass('in')
+        .attr('aria-hidden', false)
+
+      that.enforceFocus()
+
+      var e = $.Event('shown.bs.modal', { relatedTarget: _relatedTarget })
+
+      transition ?
+        that.$dialog // wait for modal to slide in
+          .one('bsTransitionEnd', function () {
+            that.$element.trigger('focus').trigger(e)
+          })
+          .emulateTransitionEnd(Modal.TRANSITION_DURATION) :
+        that.$element.trigger('focus').trigger(e)
+    })
+  }
+
+  Modal.prototype.hide = function (e) {
+    if (e) e.preventDefault()
+
+    e = $.Event('hide.bs.modal')
+
+    this.$element.trigger(e)
+
+    if (!this.isShown || e.isDefaultPrevented()) return
+
+    this.isShown = false
+
+    this.escape()
+    this.resize()
+
+    $(document).off('focusin.bs.modal')
+
+    this.$element
+      .removeClass('in')
+      .attr('aria-hidden', true)
+      .off('click.dismiss.bs.modal')
+      .off('mouseup.dismiss.bs.modal')
+
+    this.$dialog.off('mousedown.dismiss.bs.modal')
+
+    $.support.transition && this.$element.hasClass('fade') ?
+      this.$element
+        .one('bsTransitionEnd', $.proxy(this.hideModal, this))
+        .emulateTransitionEnd(Modal.TRANSITION_DURATION) :
+      this.hideModal()
+  }
+
+  Modal.prototype.enforceFocus = function () {
+    $(document)
+      .off('focusin.bs.modal') // guard against infinite focus loop
+      .on('focusin.bs.modal', $.proxy(function (e) {
+        if (this.$element[0] !== e.target && !this.$element.has(e.target).length) {
+          this.$element.trigger('focus')
+        }
+      }, this))
+  }
+
+  Modal.prototype.escape = function () {
+    if (this.isShown && this.options.keyboard) {
+      this.$element.on('keydown.dismiss.bs.modal', $.proxy(function (e) {
+        e.which == 27 && this.hide()
+      }, this))
+    } else if (!this.isShown) {
+      this.$element.off('keydown.dismiss.bs.modal')
+    }
+  }
+
+  Modal.prototype.resize = function () {
+    if (this.isShown) {
+      $(window).on('resize.bs.modal', $.proxy(this.handleUpdate, this))
+    } else {
+      $(window).off('resize.bs.modal')
+    }
+  }
+
+  Modal.prototype.hideModal = function () {
+    var that = this
+    this.$element.hide()
+    this.backdrop(function () {
+      that.$body.removeClass('modal-open')
+      that.$body.find('#my-fixed-top').css('padding-right', '0px');
+      that.resetAdjustments()
+      that.resetScrollbar()
+      that.$element.trigger('hidden.bs.modal')
+    })
+  }
+
+  Modal.prototype.removeBackdrop = function () {
+    this.$backdrop && this.$backdrop.remove()
+    this.$backdrop = null
+  }
+
+  Modal.prototype.backdrop = function (callback) {
+    var that = this
+    var animate = this.$element.hasClass('fade') ? 'fade' : ''
+
+    if (this.isShown && this.options.backdrop) {
+      var doAnimate = $.support.transition && animate
+
+      this.$backdrop = $('<div class="modal-backdrop ' + animate + '" />')
+        .appendTo(this.$body)
+
+      this.$element.on('click.dismiss.bs.modal', $.proxy(function (e) {
+        if (this.ignoreBackdropClick) {
+          this.ignoreBackdropClick = false
+          return
+        }
+        if (e.target !== e.currentTarget) return
+        this.options.backdrop == 'static'
+          ? this.$element[0].focus()
+          : this.hide()
+      }, this))
+
+      if (doAnimate) this.$backdrop[0].offsetWidth // force reflow
+
+      this.$backdrop.addClass('in')
+
+      if (!callback) return
+
+      doAnimate ?
+        this.$backdrop
+          .one('bsTransitionEnd', callback)
+          .emulateTransitionEnd(Modal.BACKDROP_TRANSITION_DURATION) :
+        callback()
+
+    } else if (!this.isShown && this.$backdrop) {
+      this.$backdrop.removeClass('in')
+
+      var callbackRemove = function () {
+        that.removeBackdrop()
+        callback && callback()
+      }
+      $.support.transition && this.$element.hasClass('fade') ?
+        this.$backdrop
+          .one('bsTransitionEnd', callbackRemove)
+          .emulateTransitionEnd(Modal.BACKDROP_TRANSITION_DURATION) :
+        callbackRemove()
+
+    } else if (callback) {
+      callback()
+    }
+  }
+
+  // these following methods are used to handle overflowing modals
+
+  Modal.prototype.handleUpdate = function () {
+    this.adjustDialog()
+  }
+
+  Modal.prototype.adjustDialog = function () {
+    var modalIsOverflowing = this.$element[0].scrollHeight > document.documentElement.clientHeight
+
+    this.$element.css({
+      paddingLeft:  !this.bodyIsOverflowing && modalIsOverflowing ? this.scrollbarWidth : '',
+      paddingRight: this.bodyIsOverflowing && !modalIsOverflowing ? this.scrollbarWidth : ''
+    })
+  }
+
+  Modal.prototype.resetAdjustments = function () {
+    this.$element.css({
+      paddingLeft: '',
+      paddingRight: ''
+    })
+  }
+
+  Modal.prototype.checkScrollbar = function () {
+    var fullWindowWidth = window.innerWidth
+    if (!fullWindowWidth) { // workaround for missing window.innerWidth in IE8
+      var documentElementRect = document.documentElement.getBoundingClientRect()
+      fullWindowWidth = documentElementRect.right - Math.abs(documentElementRect.left)
+    }
+    this.bodyIsOverflowing = document.body.clientWidth < fullWindowWidth
+    this.scrollbarWidth = this.measureScrollbar()
+  }
+
+  Modal.prototype.setScrollbar = function () {
+    var bodyPad = parseInt((this.$body.css('padding-right') || 0), 10)
+    this.originalBodyPad = document.body.style.paddingRight || ''
+    if (this.bodyIsOverflowing) this.$body.css('padding-right', bodyPad + this.scrollbarWidth)
+  }
+
+  Modal.prototype.resetScrollbar = function () {
+    this.$body.css('padding-right', this.originalBodyPad)
+  }
+
+  Modal.prototype.measureScrollbar = function () { // thx walsh
+    var scrollDiv = document.createElement('div')
+    scrollDiv.className = 'modal-scrollbar-measure'
+    this.$body.append(scrollDiv)
+    var scrollbarWidth = scrollDiv.offsetWidth - scrollDiv.clientWidth
+    this.$body[0].removeChild(scrollDiv)
+    return scrollbarWidth
+  }
+
+
+  // MODAL PLUGIN DEFINITION
+  // =======================
+
+  function Plugin(option, _relatedTarget) {
+    return this.each(function () {
+      var $this   = $(this)
+      var data    = $this.data('bs.modal')
+      var options = $.extend({}, Modal.DEFAULTS, $this.data(), typeof option == 'object' && option)
+
+      if (!data) $this.data('bs.modal', (data = new Modal(this, options)))
+      if (typeof option == 'string') data[option](_relatedTarget)
+      else if (options.show) data.show(_relatedTarget)
+    })
+  }
+
+  var old = $.fn.modal
+
+  $.fn.modal             = Plugin
+  $.fn.modal.Constructor = Modal
+
+
+  // MODAL NO CONFLICT
+  // =================
+
+  $.fn.modal.noConflict = function () {
+    $.fn.modal = old
+    return this
+  }
+
+
+  // MODAL DATA-API
+  // ==============
+
+  $(document).on('click.bs.modal.data-api', '[data-toggle="modal"]', function (e) {
+    var $this   = $(this)
+    var href    = $this.attr('href')
+    var $target = $($this.attr('data-target') || (href && href.replace(/.*(?=#[^\s]+$)/, ''))) // strip for ie7
+    var option  = $target.data('bs.modal') ? 'toggle' : $.extend({ remote: !/#/.test(href) && href }, $target.data(), $this.data())
+
+    if ($this.is('a')) e.preventDefault()
+
+    $target.one('show.bs.modal', function (showEvent) {
+      if (showEvent.isDefaultPrevented()) return // only register focus restorer if modal will actually get shown
+      $target.one('hidden.bs.modal', function () {
+        $this.is(':visible') && $this.trigger('focus')
+      })
+    })
+    Plugin.call($target, option, this)
+  })
+
+}(jQuery);
+
+
+
+
+
+
+
+
+
 $(document).ready(function(){
 	//window.onbeforeunload = function(){
 
@@ -561,8 +910,8 @@ $(document).ready(function(){
 		return a<b?a:b;
 
 	}
-	// render the retrieved projects in the div in homepage
-	var list_projects = function(projects) {
+	// render the retrieved projects in the div in left panel
+	var list_projects_panel = function(projects) {
 		projs = projects.pbox;
 		var pro_limit = 6;
 
@@ -592,7 +941,11 @@ $(document).ready(function(){
 			type: 'GET',
 			dataType: 'json',
 			success: function(projects){
-				list_projects(projects);
+				// show the projects in the left panel
+				list_projects_panel(projects);
+				// Also show in the work modal form
+				list_projects_work_form();
+
 			},
 			error: function(e){
 				alert('Server Error: Project Retrieval Failed' + e);
@@ -676,6 +1029,19 @@ $(document).ready(function(){
 		return false;
 	}
 
+	$('#add-project-cancel').click(function(){
+		// remove 17px padding from my-fixed-top navbar
+		$('#add-project-modal').modal('hide');
+		// It's a hack to correspond to TRANSITION_DURATION time bootstrap.js modal transition
+		//setTimeout(function(){
+		//	$('#my-fixed-top').css('padding-right', '0px')}, 400);
+	});
+
+	$('#add-project-close').click(function(){
+		$('#add-project-cancel').click();
+	});
+
+
 	// On submit disable the button
 	// error handling and then submitting
  	$('#add-project-submit').on('click', function(){
@@ -716,7 +1082,10 @@ $(document).ready(function(){
  							// update the projs 
  							// display success message at the footer and close the modal
  							fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Project Added Successfully").find('span').css('color','green');
- 							setTimeout(function(){ $('#add-project-modal').modal('hide'); }, 1600);
+ 							setTimeout(function(){ $('#add-project-modal').modal('hide'); }, 1200);
+ 							// remove 17px padding from my-fixed-top navbar
+ 							$('#my-fixed-top').css('padding-right', '0px');
+
  						}
 
 					},
@@ -724,31 +1093,109 @@ $(document).ready(function(){
 						$('#add-project-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Error: Couldn't add the Project");						
 					}
 				}); 
-
-
  			}
-
- 			else{
- 				
+ 			else{	
  				$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name already exists");	
  			}
  		}
- 		
+
  		else {
  			$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name can't be empty");
  		}
-
  	});
 
  	$('#add-project').on('click', function(){
  		$('#add-project-footer-div').empty(); // remove warnings from modal
 		$('#add-project-modal').modal({backdrop:'static', keyboard:false});
+		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+		$('#my-fixed-top').css('padding-right', '17px');
 	});
 
 
 
 
  	//--------END of Projects---------------------//
+
+
+   //--------- Data Entry ----------------------------//
+
+   $('#add-work').on('click', function(){
+ 		$('#add-work-footer-div').empty(); // remove warnings from modal
+		$('#add-work-modal').modal({backdrop:'static', keyboard:false});
+		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+		$('#my-fixed-top').css('padding-right', '17px');
+	});
+
+   $('#add-work-cancel').click(function(){
+		// remove 17px padding from my-fixed-top navbar
+		$('#add-work-modal').modal('hide');
+		// It's a hack to correspond to TRANSITION_DURATION time bootstrap.js modal transition
+		// Still flickering -so copied whole modal from bootstrap.js and added the code there
+		//setTimeout(function(){
+		//	$('#my-fixed-top').css('padding-right', '0px')}, 400);
+	});
+
+	$('#add-work-close').click(function(){
+		$('#add-work-cancel').click();
+	});
+
+	$('#add-event').on('click', function(){
+ 		$('#add-event-footer-div').empty(); // remove warnings from modal
+		$('#add-event-modal').modal({backdrop:'static', keyboard:false});
+		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+		$('#my-fixed-top').css('padding-right', '17px');
+	});
+
+   $('#add-event-cancel').click(function(){
+		// remove 17px padding from my-fixed-top navbar
+		$('#add-event-modal').modal('hide');
+		// It's a hack to correspond to TRANSITION_DURATION time bootstrap.js modal transition
+		//setTimeout(function(){
+		//	$('#my-fixed-top').css('padding-right', '0px')}, 400);
+	});
+
+	$('#add-event-close').click(function(){
+		$('#add-event-cancel').click();
+	});
+
+	// set the projects in the client side work form modal
+	// called after the ajax call for the list of all projects
+	var list_projects_work_form = function(){
+		// we have projs	
+	    var work_form_dropdown_menu = $('#project-form-button').siblings('.project-dropdown-menu')[0];
+  		// Execute the code only for data.html not for project.html etc.
+  		if(work_form_dropdown_menu) {
+  			var b = $('#project-form-button');
+  			var projectName = projs[0].projectName;
+
+    		b.html(projectName+'<span class="caret">');
+    		b.data('pid', projs[0].projectId);
+    		b.data('pname', projectName);
+    		b.data("isprod", projs[0].projectProductive);
+
+    		// set the initial tag as the first project name
+    		var t = '<div class="tags-added">'+projectName+'</div>',
+		  		ts = $('#tag-section');
+		  	ts.prepend(t);
+		  	ts.data('tags', [projectName]);
+		  	
+    		for(var j=0; j<projs.length; ++j){
+  	  			var temp_li = $(document.createElement("li"));
+  	  			var temp_a = $(document.createElement("a"));
+  	  			temp_a.text(projs[j].projectName); 
+  	  			temp_a.data('pid', projs[j].projectId);
+  	  			temp_a.data('pname', projs[j].projectName);
+  	  			temp_a.data('isprod', projs[j].projectProductive);
+  	  			
+  	  			temp_li.append(temp_a);
+  	  			work_form_dropdown_menu.appendChild(temp_li[0]);
+    		}
+
+		}
+	}
+
+
+   //-----------End of Data Entry-----------------------//
  	
 
 //---------------------BEGIN TIMER----------------------------------//
@@ -843,6 +1290,8 @@ $(document).ready(function(){
 			}
 			clearInterval(timer_id);
 			$('#stop-timer-modal').modal('show');
+			// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+			$('#my-fixed-top').css('padding-right','17px');
 			time_hour = 0;
 			time_minute = 0;	
 			$('#timer-time').text(formatTime('--', '--'));	
@@ -933,34 +1382,34 @@ $(document).ready(function(){
 	//---------------------------------------------------//
 
 
-  //-------- Fill the current date and previous 7 dates in data and event
-  //as soon as page is loaded	---------------//
-  var date = new Date(); // today
-  var data_form_dropdown_menu = $('#date-form-button').siblings('.select-dropdown-menu')[0],
-  event_form_dropdown_menu = $('#date-form-button-event').siblings('.select-dropdown-menu')[0];
-  // Execute the code only for data.html not for project.html etc.
-  if(data_form_dropdown_menu) {
-    $('#date-form-button').text(date.toDateString() + ' - Today');
-    $('#date-form-button-event').text(date.toDateString() + ' - Today');
+  	//-------- Fill the current date and previous 7 dates in data and event
+  	//as soon as page is loaded	---------------//
+  	var date = new Date(); // today
+  	var data_form_dropdown_menu = $('#date-form-button').siblings('.select-dropdown-menu')[0],
+  		event_form_dropdown_menu = $('#date-form-button-event').siblings('.select-dropdown-menu')[0];
+  	// Execute the code only for data.html not for project.html etc.
+  	if(data_form_dropdown_menu) {
+    	$('#date-form-button').html(date.toDateString() + ' - Today'+'<span class="caret">');
+    	$('#date-form-button-event').html(date.toDateString() + ' - Today'+'<span class="caret">');
 
-    for(var j=0; j<38; ++j){
-  	  var temp_li = document.createElement("li");
-  	  var temp_a = document.createElement("a");
-  	  temp_a.textContent = date.toDateString(); // Wed Jun 24 2015 format
-  	  if(j===0)
-  		temp_a.textContent += ' - Today';
+    	for(var j=0; j<38; ++j){
+  	  		var temp_li = document.createElement("li");
+  	  		var temp_a = document.createElement("a");
+  	  		temp_a.textContent = date.toDateString(); // Wed Jun 24 2015 format
+  	  		if(j===0)
+ 	 			temp_a.textContent += ' - Today';
 
-  	  date.setDate(date.getDate()-1); // find previous date
+  	  		date.setDate(date.getDate()-1); // find previous date
 
-  	  temp_li.appendChild(temp_a);
-  	  data_form_dropdown_menu.appendChild(temp_li);
-  	  event_form_dropdown_menu.appendChild(temp_li.cloneNode(true)); // deep copy
-    }
-  }
+  	  		temp_li.appendChild(temp_a);
+  	  		data_form_dropdown_menu.appendChild(temp_li);
+  	  		event_form_dropdown_menu.appendChild(temp_li.cloneNode(true)); // deep copy
+    	}
+  	}
 
 
-     // for changing text in dropdown button
-     // but this should come only after setting dates in the form in data and event
+    // for changing text in dropdown button
+    // but this should come only after setting dates in the form in data and event
    	// not necessary as we are using on('a') rather than click() function
     $('.select-dropdown-menu').on('click', 'a', function(){   //hack for mobiles included
     	  $(this).parent().parent().parent().find('button')
@@ -968,13 +1417,14 @@ $(document).ready(function(){
 		});
 
 
-    // The projects were set in the jinja template
-    // we will change this so as to retrieve the data through ajax calls
+
+    // only after setting projects in the form after ajax success
     $('.project-dropdown-menu').on('click', 'a', function(){   //we need to copy data-pid aswell
     	  var b = $(this).parent().parent().parent().find('button');
     	  b.html( $(this).html() + '<span class="caret"></span>' );    
     	  b.data( 'pid', $(this).data('pid') );
     	  b.data('pname', $(this).data('pname'));
+    	  b.data('isprod', $(this).data('isprod'));
     	  //alert(b.data('pname'));
     	  b.data('isprod', $(this).data('isprod'));
     	  var tag = b.data('pname'),
@@ -996,10 +1446,10 @@ $(document).ready(function(){
 
 		
 		// for changing star colour in data entry
-		$('#form-data-star').on('click', function(){
+		$('#form-work-star').on('click', function(){
 		  $(this).find('div').toggleClass('glyphicon-star-empty');
 		  $(this).find('div').toggleClass('glyphicon-star');
-		  var star = $('#form-data-star'); // jquery object
+		  var star = $('#form-work-star'); // jquery object
 		  if ( star.data('value') === true )
 		  	star.data('value', false); // star set to unselected
 		  else 
@@ -1026,6 +1476,7 @@ $(document).ready(function(){
 			if(event.keyCode === 13)
 				$('#event-add-tag-button').click();
 		});
+
 		// function to find whether a string is present in a list
 		// case insensitive findtag(["binu", "jasim"], BiNu) => true
 		var findtag = function(a, query){
@@ -1036,6 +1487,7 @@ $(document).ready(function(){
 			}
 			return false;
 		}
+
 		// Add tag
 		$('#add-tag-button').on('click', function(){
 		  var tag = $('#tag-input-text').val();
@@ -1058,6 +1510,7 @@ $(document).ready(function(){
 		  }
 		  return false; // To prevent page popping to the top
 		});
+
 		// Add tag for event
 		$('#event-add-tag-button').on('click', function(){
 		  var tag = $('#event-tag-input-text').val();
@@ -1123,21 +1576,21 @@ $(document).ready(function(){
   	input2.setAttribute("type", "hidden");
   	input2.setAttribute("name", "project");
   	//input2.value = $('#work-form-button')[0].innerText;
-  	input2.value = $('#work-form-button').data('pid');
+  	input2.value = $('#project-form-button').data('pid');
   	form.appendChild(input2);
   	// project name
   	var input21 = document.createElement("input");
 	input21.setAttribute("type", "hidden");
   	input21.setAttribute("name", "pname");
   	//input2.value = $('#work-form-button')[0].innerText;
-  	input21.value = $('#work-form-button').data('pname');
+  	input21.value = $('#project-form-button').data('pname');
   	form.appendChild(input21);  	
   	// is project productive - to avoid datastore access
   	var input22 = document.createElement("input");
   	input22.setAttribute("type", "hidden");
   	input22.setAttribute("name", "isprod");
   	//input2.value = $('#work-form-button')[0].innerText;
-  	input22.value = $('#work-form-button').data('isprod');
+  	input22.value = $('#project-form-button').data('isprod');
   	form.appendChild(input22);
   	// date
   	var input3 = document.createElement("input");
@@ -1163,7 +1616,7 @@ $(document).ready(function(){
   	var input6 = document.createElement("input");
   	input6.setAttribute("type", "hidden");
   	input6.setAttribute("name", "achievement");
-  	input6.value = $('#form-data-star').data('value');
+  	input6.value = $('#form-work-star').data('value');
   	form.appendChild(input6);
 	// Notes textarea-div
   	var input7 = document.createElement("input");

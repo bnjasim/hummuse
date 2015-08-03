@@ -121,12 +121,28 @@
 	</ul>
   </div>
 
-
+  
   <div id="star-panel" class="link-panel">
     <div class="glyphicon glyphicon-star-empty theme-color"></div>
     <a>Special Works</a>
   </div>
 -->
+
+  <div class="panel-content"> 
+   <div class="panel-header">Make Notes
+   <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
+   </div>
+
+   <div class="left-panel panel-content">
+      <a id="add-work">Add Work</a>
+   </div> 
+
+   <div class="left-panel panel-content">
+      <a id="add-event">Add Event</a>
+   </div> 
+
+  </div> 
+
   <div id="projects-panel" class="panel-content">	
 	 <div class="panel-header">Projects
 	 <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
@@ -169,11 +185,11 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <button id="add-project-close" type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <button id="add-project-close" type="button" class="close" aria-hidden="true">&times</button>
           <h4 class="modal-title" id="add-project-modal-label">Add A New Project</h4>
         </div>
         <div class="modal-body">
-          <form id="add-project-form" method="post" action="/projects" class="form-horizontal my-form-styles" role="form">  
+          <form id="add-project-form"  class="form-horizontal my-form-styles" role="form">  
             <!-- Project Name -->
             <div class="form-group my-form-group">
               <label class="control-label col-md-2" for="add-project-input">
@@ -208,8 +224,9 @@
         </div>
         <div class="modal-footer">
           <div id="add-project-footer-div"></div>
-          <button id="add-project-cancel" type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button id="add-project-submit" type="button" class="btn btn-success">Submit</button>
+          <!-- No need of data-dismiss as we deal with it in javascript manually using modal('hide')-->
+          <button id="add-project-cancel" type="button" class="btn btn-default">Cancel</button>
+          <button id="add-project-submit" type="button" class="btn btn-primary">Submit</button>
         </div>
       </div>
     </div>
@@ -228,12 +245,292 @@
           Form
         </div>
         <div class="modal-footer">
+          <!-- No need of data-dismiss as we deal with it in javascript manually using modal('hide')-->
           <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
           <button type="button" class="btn btn-success" data-dismiss="modal">Save</button>
         </div>
       </div>
     </div>
   </div>
+
+
+
+ <!-- Modal3 - Make Entry/Add Work modal -->
+  <div class="modal fade" id="add-work-modal" tabindex="-1" role="modal" aria-labelledby="add-work-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-my-width">
+      <div class="modal-content">
+        <div class="modal-header">
+          <!-- This is floated to the right -->
+          <button id="add-work-close" type="button" class="close" aria-hidden="true">&times</button>
+          
+          <div class="my-modal-header-place">
+            <div class="modal-title">Work</div>
+
+            <div id="form-work-star" class="my-big-star-form theme-color" data-value="false">
+              <div class="glyphicon glyphicon-star-empty"></div>
+            </div>
+            
+          </div>
+        </div>
+        <div class="modal-body">
+         <form id="add-work-form" class="form-horizontal my-form-styles" role="form">  
+
+          <!-- Pick Date dropdown button -->
+          <div class="form-group my-form-group">
+            
+            <label class="control-label col-md-2" for="date-form-button">
+              <div class="data-highlight">Date</div>
+            </label>
+
+            <div class="col-md-8">
+              <div class="btn-group select-button" tabindex="2">
+                <button type="button" id="date-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">
+                  Today<span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu select-dropdown-menu" role="menu">
+                <!-- Code goes in javascript -->
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Choose Activity Dropdown box -->
+          <div class="form-group my-form-group">
+
+            <label class="control-label col-md-2" for="work-form-button">
+              <div class="data-highlight">Project</div>
+            </label>
+
+            <div class="col-md-8">
+              <div class="btn-group select-button" tabindex="1">
+                <button type="button" id="project-form-button" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown" data-pid="" data-pname="" data-isprod="">
+                 <span class="caret"></span>
+                </button>
+
+                <ul class="dropdown-menu project-dropdown-menu" role="menu">
+                  <!-- Code to insert Projects goes in client side -->
+                </ul>
+              </div>
+            </div>
+          </div>
+    
+          <!-- Hours and minutes -->
+          <div class="form-group my-form-group">
+
+            <label class="control-label col-md-2" for="working-time" style="padding-top:16px;">
+              <div class="data-highlight">Working<br/>Time</div>
+            </label>
+
+            <div class="col-md-8" id="working-time">
+              <div class="row">
+                <div class="col-sm-3">
+
+                  <label class="sub-label" for="working-hours">Hours</label>
+                  <div class="btn-group select-button" tabindex="3">
+                    <button type="button" id="form-working-hours" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">1<span class="caret"></span>
+                    </button>
+
+                    <ul class="dropdown-menu select-dropdown-menu" role="menu">
+                      {% for i in range(0,18) %}
+                      <li><a>{{i}}</a></li>
+                      {% endfor %}
+                      <li><a>18?? </a></li>
+                    </ul>
+
+                  </div>
+                </div>
+
+                <div class="col-sm-3">
+
+                  <label class="sub-label" for="working-minutes">Minutes</label>
+                  <div class="btn-group select-button" tabindex="4">
+                    <button type="button" id="form-working-minutes" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">00<span class="caret"></span>
+                    </button>
+
+                    <ul class="dropdown-menu select-dropdown-menu" role="menu">
+                      <li><a>00</a></li>
+                      <li><a>05</a></li>
+                      {% for i in range(10,60,5) %}
+                        <li><a>{{i}}</a></li>
+                      {% endfor %}  
+                    </ul>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+    
+         
+
+          <!-- Form Notes -->
+          <div class="form-group my-form-group">
+            <label class="control-label col-md-2" for="notes-form">
+              <div class="data-highlight">Notes</div>
+            </label>
+
+            <div class="col-md-8"> 
+              <div class="textarea-icon-group">
+                <div class="btn-group">
+                  <button class="btn" type="button" data-divbtn="bold" title="Bold">
+                    <i class="textarea-i-bold"></i>
+                  </button>
+                  <button class="btn" type="button" data-divbtn="italic" title="Italic">
+                    <i class="textarea-i-italic"></i>
+                  </button>
+                  <button class="btn" type="button" data-divbtn="underline" title="Underline">
+                    <i class="textarea-i-underline"></i>
+                  </button>
+                  <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
+                    <i class="textarea-i-ul"></i>
+                  </button>
+                  <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
+                    <i class="textarea-i-ol"></i>
+                  </button>
+                </div>
+              </div>   
+
+              <div id="notes-form" class="textarea-div" contenteditable="true" tabindex="5"></div>
+            </div>
+          </div>
+
+          <!-- Form Notes -->
+          <div class="form-group my-form-group">
+            <label class="control-label col-md-2" for="tag-input-text">
+              <div class="data-highlight">Tags</div>
+            </label>
+
+            <div class="col-md-8" id="tag-section" data-tags="[]">
+              <!--<div class="tags-added">javascript</div>
+              <div class="tags-added">css</div> -->
+            </div> 
+            <br/> <br/>
+
+            <div class="col-sm-4 col-md-offset-2">    
+              <input type="text" class="form-control rta" id="tag-input-text" tabindex="6"></input>
+            </div>
+
+            <div class="col-sm-2">
+              <button id = "add-tag-button" class="btn btn-success" tabindex="7">Add</button>
+            </div>
+          </div>    
+  
+            
+         </form>
+        </div>
+
+        <div class="modal-footer my-modal-footer">
+          <div id="add-work-footer-div"></div>
+          <button id="add-work-cancel" type="button" class="btn btn-default">Cancel</button>
+          <button id="form-work-submit" type="button" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+ <!-- Modal4 - Add Event modal -->
+  <div class="modal fade" id="add-event-modal" tabindex="-1" role="modal" aria-labelledby="add-event-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-my-width">
+      <div class="modal-content">
+        <div class="modal-header">
+        
+          <!-- This is floated to the right -->
+          <button id="add-event-close" type="button" class="close" aria-hidden="true">&times</button>
+          
+          <div class="my-modal-header-place">
+            <div class="modal-title">Event</div>
+
+            <div id="form-event-star" class="my-big-star-form theme-color" data-value="false">
+              <div class="glyphicon glyphicon-star-empty"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-body">
+          <form method="post" id="form-event" class="form-horizontal my-form-styles" role="form">  
+            <!-- Pick Date dropdown button -->
+            <div class="form-group my-form-group">
+              <label class="control-label col-md-2" for="date-form-button-event">
+                <div class="data-highlight">Date</div>
+              </label>
+
+              <div class="col-md-8">
+                <div class="btn-group select-button" tabindex="2">
+                  <button type="button" id="date-form-button-event" class="btn form-control  btn-default dropdown-toggle" data-toggle="dropdown">Today<span class="caret"></span>
+                  </button>
+
+                  <ul class="dropdown-menu select-dropdown-menu" role="menu">
+            
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Textarea-div -->
+            <div class="form-group my-form-group">
+              <label class="control-label col-md-2" for="notes-form-event">
+                <div class="data-highlight">Notes</div>
+              </label>
+
+              <div class="col-md-8"> 
+                <div class="textarea-icon-group">
+                  <div class="btn-group">
+                    <button class="btn" type="button" data-divbtn="bold" title="Bold">
+                      <i class="textarea-i-bold"></i>
+                    </button>
+                    <button class="btn" type="button" data-divbtn="italic" title="Italic">
+                      <i class="textarea-i-italic"></i>
+                    </button>
+                    <button class="btn" type="button" data-divbtn="underline" title="Underline">
+                      <i class="textarea-i-underline"></i>
+                    </button>
+                    <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
+                      <i class="textarea-i-ul"></i>
+                    </button>
+                    <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
+                      <i class="textarea-i-ol"></i>
+                    </button>
+                  </div>
+                </div>   
+                <div id="notes-form-event" class="textarea-div" contenteditable="true" tabindex="5"></div>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="form-group my-form-group">
+              <label class="control-label col-md-2" for="event-tag-input-text">
+                <div class="data-highlight">Tags</div>
+              </label>
+
+              <div class="col-md-8" id="event-tag-section" data-tags="[event]">
+                <div class="tags-added">event</div>
+              </div>  
+              <br/><br/>
+
+              <div class="col-sm-4 col-md-offset-2">    
+                <input type="text" class="form-control rta" id="event-tag-input-text" tabindex="6"></input>
+              </div>
+
+              <div class="col-sm-2">
+                <button id = "event-add-tag-button" class="btn btn-success" tabindex="7">Add</button>
+              </div>
+            </div>    
+  
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <div id="add-event-footer-div"></div>
+          <button id="add-event-cancel" type="button" class="btn btn-default">Cancel</button>
+          <button id="form-event-submit" type="button" class="btn btn-primary">Submit</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
 
 <!-- Mustache template - avoided by jinja -->
 {% raw %}
