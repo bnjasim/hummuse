@@ -630,10 +630,17 @@ $(document).ready(function(){
   				h = Math.floor(hrs),
 				m = Math.ceil((hrs - h) * 60);
 			
-			entry['h'] = h;
-			entry['ishz'] = (h === 0);
-			entry['m'] = m;
-			entry['ismz'] = (m === 0);
+			var hour_string = '';
+			if (h > 0)
+				if (m > 0)
+					hour_string = h + 'h ' + m + 'm';
+				else
+					hour_string = h + 'h';
+			else if (m > 0)
+				hour_string = m + 'm';
+
+			entry['hours'] = hour_string;
+			entry['ishz'] = (h === 0 && m === 0); // only if both are zero
 
 			var notes = entry['notes'],
 				note_limit = 300, //  #characters not including html tags
@@ -834,17 +841,19 @@ $(document).ready(function(){
 
 
 	// function to render the search by tag results
-	var display_search_results = function(search_results, tag){
+	// option 0 indicates search results, 1 indicates project filter result
+	var display_search_results = function(search_results, tag_or_pid, option){
 		
 		var results = search_results['results'];
 		search['cursor'] = search_results['cursor'];
 		search['more'] = search_results['more'];
 		search['results'] = results;
 
+		// main-content-title is appended only in search-button on click event
 		if (!results || results.length===0)
-			$('#main-content-title').html('No results found for <b>'+tag+'</b>');
+			$('#main-content-title').html('No results found for <b>'+tag_or_pid+'</b>');
 		else
-			$('#main-content-title').html('Search results for <b>'+tag+'</b>');
+			$('#main-content-title').html('Search results for <b>'+tag_or_pid+'</b>');
 			
 		
 		if ($('.initial-loading-container'))
@@ -876,18 +885,29 @@ $(document).ready(function(){
 		$('#div-load-more').append('<a class="load-more-click">Load >></a>');
 			
   		if (search['more']) {
-  				
+  			if (!option) {	
   				$('a.load-more-click').on('click', function(){
   					// empty and append = html
 					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
-					search_ajax_tag(tag, search['cursor']);
+					search_ajax_tag(tag_or_pid, search['cursor']);
 				});
+			}
+			
+			else {
+				$('a.load-more-click').on('click', function(){
+  					// empty and append = html
+					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
+					filter_by_project_ajax(tag_or_pid, search['cursor']);
+				});	
+			}	
 		}
 		else 
 			finished_load();
 
 	}
 
+	// It's very important that cursor is None for the first call
+	// using search['cursor'] can be problematic
 	var search_ajax_tag = function(tag, cursor){
 		ntag = tag.toLowerCase().replace(/ /g, '')
 		processing = true;
@@ -897,7 +917,7 @@ $(document).ready(function(){
 			data: {'tag': ntag, 'cursor': cursor},
 			dataType: 'json',
 			success: function(search_results){
-				display_search_results(search_results, tag);
+				display_search_results(search_results, tag, 0);
 				processing = false;
 			},
 			error: function(e){
@@ -1212,6 +1232,55 @@ $(document).ready(function(){
 		}
 	}
 
+	// on() works for dynamically added contents  but click() doesn't
+	// shouldn't be invoked for ...show all which doesn't have an li
+	$('#projects-panel').on('click', 'li a', function(){
+		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+		//$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+		$(this).addClass('left-panel-link-highlight');	
+		var pid = $(this).data('pid');
+		var project = $(this).text();
+		//alert(project+' '+pid);
+		if(!pid) { // or project === 'All'
+			if (jsdata['data']) {// don't do anything before first data has arrived
+				mainContentDiv.empty();
+				mainContentDiv.append('<div class="empty-box"></div>');
+				render_content(0);
+			}
+		}
+		else if (!processing){
+			mainContentDiv.empty();
+			//page_state = 'search';
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			//search_ajax_tag(project);
+			filter_by_project_ajax(pid);
+		}
+
+		//return false; // prevent default propagation
+	});
+	
+	//romance = {};
+	// It's very important that cursor is None for the first call
+	// using search['cursor'] can be problematic
+	var filter_by_project_ajax = function(pid, cursor) {
+		
+		processing = true;
+		$.ajax({
+			url: '/filterproject',
+			type: 'POST',
+			data: {'pid':pid, 'cursor':cursor},
+			dataType: 'json',
+			success: function(search_results){
+				results = search_results;
+				display_search_results(search_results, pid, 1); // option 1 
+				processing = false;
+			},
+			error: function(e){
+				alert('Server Error: Search Failed' + e);
+			}
+		}); 
+
+	}
 
    //-----------End of Data Entry-----------------------//
  	
@@ -1315,6 +1384,20 @@ $(document).ready(function(){
 			$('#timer-time').text(formatTime('--', '--'));	
 		}
 	});
+	// Timer List of Projects Display
+	var p_index = 0;
+	$('#right-caret-arrow').on('click', function(){
+		p_index += 1;
+		p_index = (p_index >= projs.length)? 0 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
+
+	});
+	$('#left-caret-arrow').on('click', function(){
+		p_index -= 1;
+		p_index = (p_index < 0)? projs.length-1 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
+
+	});
 //------------------------------------------------------------//
 //----------------END OF TIMER-------------------------------//
 
@@ -1349,29 +1432,7 @@ $(document).ready(function(){
 
 	}); */
 
-	// on() works for dynamically added contents  but click() doesn't
-	// shouldn't be invoked for ...show all which doesn't have an li
-	$('#projects-panel').on('click', 'li a', function(){
-		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-		$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-		$(this).addClass('left-panel-link-highlight');	
-		var pid = $(this).data('pid');
-		var project = $(this).text();
-		//alert(project+' '+pid);
-		if(!pid) { // or project === 'All'
-			if (jsdata['data']) {// don't do anything before first data has arrived
-				mainContentDiv.empty();
-				mainContentDiv.append('<div class="empty-box"></div>');
-				render_content(0);
-			}
-		}
-		else{
-			mainContentDiv.empty();
-			//page_state = 'search';
-			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-			search_ajax_tag(project);
-		}
-	});
+	
 
 	/* $('#star-panel').on('click', function(){	
 		$(this).toggleClass('left-panel-link-highlight');
@@ -1381,19 +1442,7 @@ $(document).ready(function(){
 	}); */
 
 	//var project_array = ['Hummuse', 'One Wolf and two goats befriend three cows','NLP','Data Science'];
-	var p_index = 0;
-	$('#right-caret-arrow').on('click', function(){
-		p_index += 1;
-		p_index = (p_index >= projs.length)? 0 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
-
-	});
-	$('#left-caret-arrow').on('click', function(){
-		p_index -= 1;
-		p_index = (p_index < 0)? projs.length-1 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
-
-	});
+	
 
 	//----------- Code for data.html ---------------------//
 	//---------------------------------------------------//

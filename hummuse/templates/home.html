@@ -616,20 +616,17 @@
           <table class="work-hour-table">
           {{#entries}}
            {{#isWork}}
+            {{^ishz}}
             <tr>
               <td class="first-column">
                 <b>{{proj}}</b>:
               </td>
 
               <td class="second-column">
-                {{^ishz}}
-                  {{h}}h &nbsp;
-                {{/ishz}}
-                {{^ismz}}
-          {{m}}m
-        {{/ismz}}  
+                  {{hours}}
               </td>  
             </tr>  
+            {{/ishz}}
            {{/isWork}}  
           {{/entries}}
 

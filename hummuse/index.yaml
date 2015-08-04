@@ -41,6 +41,13 @@ indexes:
 - kind: Entry
   ancestor: yes
   properties:
+  - name: project
+  - name: date
+    direction: desc
+
+- kind: Entry
+  ancestor: yes
+  properties:
   - name: tags
   - name: date
     direction: desc

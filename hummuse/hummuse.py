@@ -51,6 +51,11 @@ class OpaqueCursor(ndb.Model):
 # to keep next tag search result cursor
 class SearchCursor(ndb.Model):
 	cursor = ndb.StringProperty(required = True);	
+
+# to keep next project search result cursor
+class ProjectSearchCursor(ndb.Model):
+	cursor = ndb.StringProperty(required = True);	
+
 		
 class Projects(ndb.Model):
 	# Set Account as the parent of a Project
@@ -69,8 +74,8 @@ class Projects(ndb.Model):
 class Entry(ndb.Model):
 	# Need to set Account as the parent of every entry
 	date = ndb.DateProperty(required = True)	
-	datakind = ndb.StringProperty(choices = ["work", "event"])
-	isAchievement = ndb.BooleanProperty(default = False, indexed = False)
+	datakind = ndb.StringProperty(choices = ["work", "event"], indexed = False)
+	isAchievement = ndb.BooleanProperty(default = False) #indexed
 	notes = ndb.TextProperty()
 	tags = ndb.StringProperty(repeated = True, indexed = False)
 	# normalized tags eg. "App Engine" --> "appengine" - computed property
@@ -81,8 +86,13 @@ class Entry(ndb.Model):
 	hoursWorked = ndb.FloatProperty(indexed = False)
 	
 	def _normalize_tags(self):
-		return [t.lower().replace(' ', '') for t in self.tags]
+		tags = self.tags
+		first_level = [t.lower().replace(' ', '') for t in tags] # hajj house as hajjhouse
+		second_level = [] # 'hajj house' as 'hajj' and 'house'
+		for tag in tags:
+			second_level += [t.lower() for t in tag.split(' ') if t]
 
+		return first_level + second_level
 
 
 class Tags(ndb.Model):
@@ -516,6 +526,8 @@ class HomeHandler(Handler):
 						 logout_url = logout_url
 						 )
 
+
+# Returns all entries
 class AjaxHomeHandler(Handler):
 
 	def post(self):
@@ -591,9 +603,7 @@ class AjaxHomeHandler(Handler):
 
 
 
-
-
-
+# Tag Search
 class AjaxTagsHandler(Handler):
 
 	def post(self):
@@ -666,6 +676,104 @@ class AjaxTagsHandler(Handler):
 
 
 
+# Project Search - Return Entries corresponding to a project
+class FilterProjectAjaxHandler(Handler):
+	# post because we are writing to DB - cursor
+	def post(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			user_id = user.user_id()
+			user_ent_key = ndb.Key(Account, user_id)
+			pid = int(self.request.get('pid', default_value=None))
+
+			if pid:
+				# only if pid is sent, we can search for the project
+				projectKey = ndb.Key(Account, user.user_id(), Projects, pid)
+				#projectObject = projectKey.get()
+				#projectName = projectObject.projectName;
+				#isproductive = projectObject.projectProductive
+				cur_id = self.request.get('cursor', default_value=None)
+				start_cursor = None
+				cursor_key = None
+				cursor_obj = None
+
+				if cur_id is not None:
+					# load more
+					cursor_key = ndb.Key('ProjectSearchCursor', int(cur_id), parent = user_ent_key)
+					cursor_obj = memcache.get(user_id+'filter-project-cursor')
+					if cursor_obj is None:
+						cursor_obj = cursor_key.get()
+				
+					start_cursor = Cursor(urlsafe = cursor_obj.cursor)	
+
+				# Search only if the key exists
+				if projectKey:
+					p = projectKey.get()
+					pname = p.projectName
+					#logging.error('------\n-------\n'+pname+'\n-----------')	.filter(Entry.project==projectKey)	
+					qry = Entry.query(ancestor = user_ent_key).filter(Entry.project==projectKey).order(-Entry.date)	
+					entries, next_cursor, more = qry.fetch_page(5, start_cursor=start_cursor)
+					#entries = qry.fetch()
+					#next_cursor = None
+					#more = False
+
+					#for e in entries:
+					#	if e.projectName == pname:
+					#		if e.project == projectKey:
+					#			logging.info('------\nBoth Matched-------\n'+pname+'\n-----------')	
+					#		else:
+					#			logging.error('------\nName Matched But not Key-------\n'+pname+'\n'+str(projectKey)+'\n'+str(e.project)+'-----------')		
+
+
+					if next_cursor is not None:
+
+						if cur_id is not None:
+							cursor_obj.cursor = next_cursor.urlsafe()
+							cursor_obj.put()
+							memcache.set(user_id+'filter-project-cursor', cursor_obj)
+
+						else:	
+							all_cursors_query = ndb.gql("SELECT * FROM ProjectSearchCursor WHERE ANCESTOR IS :1", user_ent_key)
+							saved_cursor = list(all_cursors_query)
+							if(saved_cursor): # not empty - update
+								saved_cursor[0].cursor = next_cursor.urlsafe()
+								cursor_key = saved_cursor[0].put()
+								cur_id = cursor_key.id()
+								memcache.set(user_id+'filter-project-cursor', saved_cursor[0], 1800)
+								#logging.error('---------\n------Restored saved cursor--\n--------')
+							else:	
+								cursor_obj = ProjectSearchCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
+								cursor_key = cursor_obj.put()
+								cur_id = cursor_key.id()		
+								memcache.set(user_id+'filter-project-cursor', cursor_obj, 1800)
+
+						
+					# entries is not json serializable because of date object
+					results = []
+					logging.error('------\n-------\n'+str(len(entries))+'\n-----------')
+					for entry in entries:
+						entrydict = make_entry_dict(entry)
+						# to conform to the dailybox structure
+						entrybox = {'entries':[entrydict]}
+						entrybox['date'] = entrydict['date']
+						results.append(entrybox) 
+
+					search_results = {"response":0, "results": results, "more": more, "cursor": cur_id}
+					#logging.error('------\n-------\n'+str(search_results)+'\n-----------')
+
+				else:
+					search_results = {"response":1} # projectId not found	
+
+				self.response.out.write(json.dumps(search_results))		
+
+			else:	
+				logging.error('------\n-------\nNo pid sent\n-----------')
+
+
+
 class WelcomePageHandler(Handler):
 	def get(self):
 		self.render("welcome.html")
@@ -680,13 +788,11 @@ class UpdateHandler(Handler):
 			
 		else:
 			user_ent_key = ndb.Key(Account, user.user_id())
-			qry = Projects.query(ancestor = user_ent_key)
+			qry = Entry.query(ancestor = user_ent_key)
 			data = qry.fetch()
-
-			for d in data:
-				if 'projecthotness' in d._properties:
-					del d._properties['projecthotness']				
-					d.put()	
+			logging.error('------\n-------\n'+str(len(data))+'\n-----------')			
+			#for d in data:
+				#d.put()	
 
 		self.response.out.write('Done!')		
 
@@ -704,6 +810,7 @@ app = webapp2.WSGIApplication([
     ('/ajaxhome', AjaxHomeHandler),
     ('/searchtags', AjaxTagsHandler),
     ('/ajaxprojects', AjaxProjectsHandler),
+    ('/filterproject', FilterProjectAjaxHandler),
     ('/update', UpdateHandler)
    ], debug=True)
 
