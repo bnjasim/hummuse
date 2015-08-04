@@ -911,8 +911,7 @@ $(document).ready(function(){
 
 	}
 	// render the retrieved projects in the div in left panel
-	var list_projects_panel = function(projects) {
-		projs = projects.pbox;
+	var list_projects_panel = function() {
 		var pro_limit = 6;
 
 		var ul = $('#projects-panel').find('.left-panel-ul');
@@ -944,8 +943,9 @@ $(document).ready(function(){
 			type: 'GET',
 			dataType: 'json',
 			success: function(projects){
+				projs = projects.pbox;
 				// show the projects in the left panel
-				list_projects_panel(projects);
+				list_projects_panel();
 
 				// Also show in the work modal form
 				list_projects_work_form();
@@ -1073,12 +1073,12 @@ $(document).ready(function(){
 					url: '/addproject',
 					type: 'POST',
 					dataType: 'json',
-					data: {'pname':projectName, 'pdesc':projectDescription, 'pprod':projectProductive},
+					data: {'pname':projectName, 'pdesc':projectDescription, 'isprod':projectProductive},
 					success: function(res){
 						$('#add-project-submit').prop('disabled', false);
  						$('#add-project-cancel').prop('disabled', false);
  						$('#add-project-close').prop('disabled', false);
- 						var fdiv = $('#add-project-footer-div').css('left', '10px')
+ 						var fdiv = $('#add-project-footer-div').css('left', '10px');
  						if (res.response > 0) // already exists
  							fdiv.html("<span class='glyphicon glyphicon-remove-circle'></span>Project Already Exists");
  						
@@ -1087,8 +1087,14 @@ $(document).ready(function(){
  							$('#add-project-input').val('');
  							$('#add-project-description').val('');
  							$('#add-project-productive')[0].checked = true;
- 							// update the projs - make a new ajax call
- 							ajax_projects();
+ 							// update the projs - make a new ajax call - NO
+ 							//ajax_projects()
+ 							// better retrieve the newly added project in response
+ 							var new_project = res.project;
+ 							projs = [new_project].concat(projs); // updated the projs
+ 							list_projects_panel();
+ 							list_projects_work_form();
+ 							p_index += 1; 
 							
  							// display success message at the footer and close the modal
  							fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Project Added Successfully").find('span').css('color','green');
@@ -1437,19 +1443,15 @@ $(document).ready(function(){
     	  b.data('pname', $(this).data('pname'));
     	  b.data('isprod', $(this).data('isprod'));
     	  //alert(b.data('pname'));
-    	  b.data('isprod', $(this).data('isprod'));
     	  var tag = b.data('pname'),
     	  	  t = '<div class="tags-added">'+tag+'</div>',
 		  	  ts = $('#tag-section');
 		 
 		  	var tag_data = ts.data('tags'); // This is a list. Initially []
-		  	// No repeated tags allowed!
-		  	if(!(findtag(tag_data, tag))){
-		  		ts.find('.tags-added')[0].remove(); // remove the last project name
-		  		ts.prepend(t);
-		  		tag_data = [tag].concat(tag_data.slice(1));
-		  		ts.data('tags', tag_data);
-		  	}
+		  	ts.find('.tags-added')[0].remove(); // remove the first one - project name
+		  	ts.prepend(t);
+		  	tag_data = [tag].concat(tag_data.slice(1));
+		  	ts.data('tags', tag_data);
     	  //$('#tag-section').html('<div class="tags-added">'+tag+'</div>')
 		});
 
@@ -1494,9 +1496,10 @@ $(document).ready(function(){
 			var q = query.toLowerCase();
 			for(var i=0; i<a.length; ++i){
 				if(a[i].toLowerCase() === q) 
-					return true;
+					return i+1;
+				// returns +1 because if pos==0 it's interpreted as not found
 			}
-			return false;
+			return 0;
 		}
 
 		// Add tag
@@ -1505,7 +1508,7 @@ $(document).ready(function(){
 		  $('#tag-input-text').val("");
 
 		  if(tag.trim().length > 0){
-		  	var t = '<div class="tags-added">'+tag+'</div>',
+		  	var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>',
 		  	    ts = $('#tag-section');
 		 
 		  	var tag_data = ts.data('tags'); // This is a list. Initially []
@@ -1522,13 +1525,30 @@ $(document).ready(function(){
 		  return false; // To prevent page popping to the top
 		});
 
+		// remove tag from work
+		$('#tag-section').on('click', 'a.tag-remove', function(){
+			var tag = $(this).parent().find('span').text();
+			$(this).parent().remove(); // parent of .tag-remove is .tags-added
+			// remove it from the data-tags as well
+			var ts = $('#tag-section'),
+				data = ts.data('tags');
+
+			var pos = findtag(data, tag) - 1;
+			if (pos > 0)  // we will never remove first one
+				ts.data('tags', data.slice(0, pos).concat(data.slice(pos+1)));
+
+			else if(pos = findtag(data.slice(1), tag)) // but same project name can appear later
+				ts.data('tags', data.slice(0, pos).concat(data.slice(pos+1)));				
+				
+		});
+
 		// Add tag for event
 		$('#event-add-tag-button').on('click', function(){
 		  var tag = $('#event-tag-input-text').val();
 		  $('#event-tag-input-text').val("");
 
 		  if(tag.trim().length > 0){
-		  	var t = '<div class="tags-added">'+tag+'</div>',
+		  	var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>',
 		  	    ts = $('#event-tag-section');
 		 
 		  	var tag_data = ts.data('tags'); // This is a list. Initially []
@@ -1543,6 +1563,20 @@ $(document).ready(function(){
 		  	}
 		  }
 		  return false; // To prevent page popping to the top
+		});
+
+		// remove tag from event
+		$('#event-tag-section').on('click', 'a.tag-remove', function(){
+			var tag = $(this).parent().find('span').text();
+			$(this).parent().remove(); // parent of .tag-remove is .tags-added
+			// remove it from the data-tags as well
+			var ts = $('#event-tag-section'),
+				data = ts.data('tags');
+
+			var pos = findtag(data, tag) - 1;
+			if (pos > 0)  // we will never remove 'event'
+				ts.data('tags', data.slice(0, pos).concat(data.slice(pos+1)));
+				
 		});
 		
 // Managing Bold, Italic etc. execCommand for textarea-div  //
@@ -1572,129 +1606,142 @@ $(document).ready(function(){
   // Begin Form submission in Data through javascript //
   //--------------------------------------------------//
   // For Work
-  $('#form-work-submit').on('click', function(){
+  $('#add-work-submit').on('click', function(){
   	$(this).prop('disabled', true); // disable the button
-  	var form = $('#form-work')[0];
-  	// Create hidden input fields corresponding to each button etc. in the form
-  	// first field will indicate whether it's a work or an event
-  	var input1 = document.createElement("input");
-  	input1.setAttribute("type", "hidden");
-  	input1.setAttribute("name", "formkind");
-  	input1.value = "work";
-  	form.appendChild(input1);
-  	// input2 is project id
-  	var input2 = document.createElement("input");
-  	input2.setAttribute("type", "hidden");
-  	input2.setAttribute("name", "project");
-  	//input2.value = $('#work-form-button')[0].innerText;
-  	input2.value = $('#project-form-button').data('pid');
-  	form.appendChild(input2);
-  	// project name
-  	var input21 = document.createElement("input");
-	input21.setAttribute("type", "hidden");
-  	input21.setAttribute("name", "pname");
-  	//input2.value = $('#work-form-button')[0].innerText;
-  	input21.value = $('#project-form-button').data('pname');
-  	form.appendChild(input21);  	
+  	$('#add-work-footer-div').css('left', '45%');
+ 	$('#add-work-footer-div').html('<img src="static/images/load-small.gif" alt="processing...">');
+ 	$('#add-work-cancel').prop('disabled', true);
+ 	$('#add-work-close').prop('disabled', true);
+
+  	var input1 = "work";
+ 	// input2 is project id
+  	var input2 = $('#project-form-button').data('pid');
+   	// project name
+  	var input21 = $('#project-form-button').data('pname');
   	// is project productive - to avoid datastore access
-  	var input22 = document.createElement("input");
-  	input22.setAttribute("type", "hidden");
-  	input22.setAttribute("name", "isprod");
-  	//input2.value = $('#work-form-button')[0].innerText;
-  	input22.value = $('#project-form-button').data('isprod');
-  	form.appendChild(input22);
+  	var input22 = $('#project-form-button').data('isprod');
   	// date
-  	var input3 = document.createElement("input");
-  	input3.setAttribute("type", "hidden");
-  	input3.setAttribute("name", "date");
-  	// first one is "Wed Jun 2015 - Today"
-  	// strip off the Today with slice
-  	input3.value = $('#date-form-button').text().slice(0,15);
-  	form.appendChild(input3);
+  	var input3 = $('#date-form-button').text().slice(0,15);
   	// hours
-  	var input4 = document.createElement("input");
-  	input4.setAttribute("type", "hidden");
-  	input4.setAttribute("name", "hours");
-  	input4.value = $('#form-working-hours').text();
-  	form.appendChild(input4);
+  	var input4 = $('#form-working-hours').text();
 	// minutes
-  	var input5 = document.createElement("input");
-  	input5.setAttribute("type", "hidden");
-  	input5.setAttribute("name", "minutes");
-  	input5.value = $('#form-working-minutes').text();
-  	form.appendChild(input5);
+  	var input5 = $('#form-working-minutes').text();
   	// Achievement Star
-  	var input6 = document.createElement("input");
-  	input6.setAttribute("type", "hidden");
-  	input6.setAttribute("name", "achievement");
-  	input6.value = $('#form-work-star').data('value');
-  	form.appendChild(input6);
+  	var input6 = $('#form-work-star').data('value');
 	// Notes textarea-div
-  	var input7 = document.createElement("input");
-  	input7.setAttribute("type", "hidden");
-  	input7.setAttribute("name", "notes");
-  	input7.value = $('#notes-form').html();
-  	form.appendChild(input7);
+  	var input7 = $('#notes-form').html();
   	// Tags
-  	var input8 = document.createElement("input");
-  	input8.setAttribute("type", "hidden");
-  	input8.setAttribute("name", "tags");
-  	input8.value = $('#tag-section').data('tags');
-  	form.appendChild(input8);
-  	//alert('hours='+input4.value+' min='+input5.value);
-  	//form.setAttribute("method","get");
-  	form.submit();
+  	var input8 = $('#tag-section').data('tags'); // an array
+  
+  	var data = {'formkind':input1, 'pid':input2, 'pname':input21, 'isprod':input22,
+  				'date':input3, 'hours':input4, 'minutes':input5, 'achievement':input6,
+  				'notes':input7, 'tags':JSON.stringify(input8) };
+	$.ajax({
+
+		url: '/makeentry',
+		type: 'POST',
+		dataType: 'json',
+		data: data,
+		success: function(res){
+			$('#add-work-submit').prop('disabled', false);
+ 			$('#add-work-cancel').prop('disabled', false);
+ 			$('#add-work-close').prop('disabled', false);
+ 			var fdiv = $('#add-work-footer-div').css('left', '10px');
+
+ 			if (res.response > 0) // already exists
+ 				fdiv.html("<span class='glyphicon glyphicon-remove-circle'></span>Something Wrong!");//won't occur
+ 						
+ 			else { // success
+ 				// display success message at the footer and close the modal
+ 				fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>The Data Added Successfully").find('span').css('color','green');
+ 				setTimeout(function(){ $('#add-work-modal').modal('hide'); }, 1200);
+ 				// Remove the tags and notes
+ 				$('#notes-form').html('');
+ 				$('#tag-section').empty().append('<div class="tags-added">'+projs[0].projectName+'</div>');
+ 				$('#tag-section').data = [projs[0].projectName];
+
+ 				// remove 17px padding from my-fixed-top navbar
+ 				//$('#my-fixed-top').css('padding-right', '0px');
+ 				// Refresh the main content
+ 				jsdata = {};
+ 				mainContentDiv.empty();
+ 				mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"><div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>');
+ 				make_ajax_call();
+ 			}
+
+		},
+		error: function(e){
+			$('#add-work-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Error: Couldn't add the Data");						
+					}
+	});  
 
   });
 
 
   // For Event
-  $('#form-event-submit').on('click', function(){
+  $('#add-event-submit').on('click', function(){
   	$(this).prop('disabled', true); // disable the button
-  	var form = $('#form-event')[0];
-  	// Create hidden input fields corresponding to each button etc. in the form
-  	// first field will indicate whether it's a work or an event
-  	var input1 = document.createElement("input");
-  	input1.setAttribute("type", "hidden");
-  	input1.setAttribute("name", "formkind");
-  	input1.value = "event";
-  	form.appendChild(input1);
-  	// date
-  	var input3 = document.createElement("input");
-  	input3.setAttribute("type", "hidden");
-  	input3.setAttribute("name", "date");
-  	// first date is "Wed Jun 2015 - Today"
-  	// strip off the Today with slice
-  	input3.value = $('#date-form-button-event').text().slice(0,15);
-  	form.appendChild(input3);
-  	// Achievement Star
-  	var input6 = document.createElement("input");
-  	input6.setAttribute("type", "hidden");
-  	input6.setAttribute("name", "achievement");
-  	input6.value = $('#form-event-star').data('value');
-  	form.appendChild(input6);
-	// Notes textarea-div
-  	var input7 = document.createElement("input");
-  	input7.setAttribute("type", "hidden");
-  	input7.setAttribute("name", "notes");
-  	input7.value = $('#notes-form-event').html();
-  	form.appendChild(input7);
-  	// Tags
-  	var input8 = document.createElement("input");
-  	input8.setAttribute("type", "hidden");
-  	input8.setAttribute("name", "tags");
-  	input8.value = $('#event-tag-section').data('tags');
-  	form.appendChild(input8);
+  	$('#add-event-footer-div').css('left', '45%');
+ 	$('#add-event-footer-div').html('<img src="static/images/load-small.gif" alt="processing...">');
+ 	$('#add-event-cancel').prop('disabled', true);
+ 	$('#add-event-close').prop('disabled', true);
 
-	/*
+  	// first field will indicate whether it's a work or an event
+  	var input1 = "event";
+  	// date
+  	var input3 = $('#date-form-button-event').text().slice(0,15);
+  	// Achievement Star
+  	var input6 = $('#form-event-star').data('value');
+  	// Notes textarea-div
+  	var input7 = $('#notes-form-event').html();
+  	// Tags
+  	var input8 = $('#event-tag-section').data('tags');
+  	/*
 	var input9 = document.createElement("input");
   	input9.setAttribute("type", "hidden");
   	input9.setAttribute("name", "venue");
   	input9.value = 'barber shop';
   	form.appendChild(input9);  
   	*/
+  	var data = {'formkind':input1, 'date':input3, 'achievement':input6,
+  				'notes':input7, 'tags':JSON.stringify(input8) };
+	$.ajax({
 
-  	form.submit();
+		url: '/makeentry',
+		type: 'POST',
+		dataType: 'json',
+		data: data,
+		success: function(res){
+			$('#add-event-submit').prop('disabled', false);
+ 			$('#add-event-cancel').prop('disabled', false);
+ 			$('#add-event-close').prop('disabled', false);
+ 			var fdiv = $('#add-event-footer-div').css('left', '10px');
+
+ 			if (res.response > 0) // already exists
+ 				fdiv.html("<span class='glyphicon glyphicon-remove-circle'></span>Something Wrong!");//won't occur
+ 						
+ 			else { // success
+ 				// display success message at the footer and close the modal
+ 				fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>The Event Added Successfully").find('span').css('color','green');
+ 				setTimeout(function(){ $('#add-event-modal').modal('hide'); }, 1200);
+ 				// Remove the tags from event-tag-section and clear notes
+ 				$('#notes-form-event').html('');
+ 				$('#event-tag-section').empty().append('<div class="tags-added">event</div>');
+ 				$('#event-tag-section').data = ['event'];
+
+ 				// Refresh the main content
+ 				jsdata = {};
+ 				mainContentDiv.empty();
+ 				mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"><div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>');
+ 				make_ajax_call();
+
+ 			}
+
+		},
+		error: function(e){
+			$('#add-event-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Error: Couldn't add the Event");						
+					}
+	});  
 
   }); 
   //------- End of Form submission in Data through javascript -------//

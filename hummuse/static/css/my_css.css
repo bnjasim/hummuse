@@ -480,7 +480,28 @@ a.load-more-click:hove{
   padding-left: 10px;
   padding-right: 10px;
 }
-
+#add-work-footer-div{
+  display: inline-block;
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+}
+#add-work-footer-div span{
+  color: red;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+#add-event-footer-div{
+  display: inline-block;
+  position: absolute;
+  left: 10px;
+  font-size: 14px;
+}
+#add-event-footer-div span{
+  color: red;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 
 .modal-center{
   position: absolute;
@@ -591,6 +612,21 @@ label{
   background-color: #E6FFF6;
 }
 
+.tag-remove{
+  display: inline-block;
+  position: relative;
+  margin-left: 3px;
+  top: -5px;
+  right: -2px;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+  color: #000;
+  text-shadow: 0 1px 0 #fff;
+  filter: alpha(opacity=20);
+  opacity: .2;
+}
+
 .control-label{
   text-align: left !important;
 }
@@ -682,9 +718,14 @@ label{
 
 
 @media (min-width: 992px) {
-  .modal-my-width {
-    width: 780px;
+  .modal-my-work {
+    width: 820px;
     margin-top: 5px !important;
+  }
+
+  .modal-my-event{
+    width: 780px;
+    margin-top: 3%;
   }
 }
 
@@ -699,5 +740,5 @@ label{
 }
 
 .my-modal-footer{
-  padding: 7px 15px;
+  padding: 12px 15px;
 }

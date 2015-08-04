@@ -203,27 +203,107 @@ class AddProjectAjax(Handler):
 			self.redirect(users.create_login_url('/welcome'))
 			
 		else:
-			user = users.get_current_user()
 			user_ent_key = ndb.Key(Account, user.user_id())	
-			pName = self.request.get('pname')
-			logging.error(pName)
-			pDesc = self.request.get('pdesc')
-			pProd = self.request.get('pprod') == 'true'
+			pname = self.request.get('pname')
+			#logging.error(pName)
+			pdesc = self.request.get('pdesc')
+			isprod = self.request.get('isprod') == 'true'
+			# not absolutely necessary as we are checking for clashes in the client side
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			all_projects_name = [p.projectName for p in all_projects]
-			if (pName):
-				if (pName not in all_projects_name):
+			if (pname):
+				if (pname not in all_projects_name):
 					pro = Projects(parent = user_ent_key, 
-								   projectName=pName, 
-								   projectDescription=pDesc,
-								   projectProductive = pProd)
-					pro.put()
-					self.response.out.write(json.dumps({'response': 0})) # 0 means success
+								   projectName=pname, 
+								   projectDescription=pdesc,
+								   projectProductive = isprod)
+					pkey = pro.put()
+					new_project = make_projects_dict( pkey.get() )
+					self.response.out.write(json.dumps({'response': 0, 'project':new_project})) # 0 means success
 				else:
 					self.response.out.write(json.dumps({'response': 1})) # 1 means already exists
 			else:
 				self.response.out.write(json.dumps({'response': 2})) # 2 means empty name - can't occur 
+
+
+
+# through Ajax POST request
+class MakeEntryAjax(Handler):
+
+	def post(self):	
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/welcome'))
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())	
+			entry = {}
+			# date - a string of the format "Wed Jun 24 2015" - 15 characters
+			date = self.request.get('date') 
+			t = datetime.date.today()
+			ndb_date = t.replace(day = int(date[8:10]),
+								 month = utils.months[ date[4:7] ],
+								 year = int(date[11:15])
+								 )
+			
+			# IsAchievement
+			isAchievement = True if(self.request.get('achievement') == 'true') else False
+			
+			# notes
+			notes = self.request.get('notes')
+	
+			#tags
+			# convert space seperated string to list of strings
+			#tags = str(urllib.unquote(self.request.get('tags'))).split(',')
+			tags = json.loads(self.request.get('tags'))
+			#logging.error('\n---------\n'+str(tags)+'--------\n'+str(len(tags))+'-------------\n---------')
+			if len(tags) > 10:
+				tags = []
+
+			#logging.error(self.request.get('formkind'))
+			formkind = str( (self.request.get('formkind') ) ) 
+			if formkind == 'work':
+				# project id
+				project = int( self.request.get('pid') )
+				projectName = self.request.get('pname')
+				isproductive = self.request.get('isprod') == 'true'
+				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
+				#projectObject = projectKey.get()
+				#projectName = projectObject.projectName;
+				#isproductive = projectObject.projectProductive
+				# working time
+				h = self.request.get('hours', default_value=0)
+				m = self.request.get('minutes', default_value=0)
+				#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
+				hours = int(h) + int(m)/60.0
+
+				entry.update({'parent': user_ent_key,
+						 	'datakind': formkind,
+						 	'project': projectKey, 
+						 	'projectName': projectName,
+						 	'isWorkProductive': isproductive,
+						 	'notes': notes,
+						 	'date':  ndb_date,	
+						 	'hoursWorked': hours,
+						 	'isAchievement': isAchievement,
+						  	'tags': tags 
+						 	  })
+
+			else:
+				entry.update({'parent': user_ent_key,
+							'datakind': formkind,
+							'notes': notes,
+							'date': ndb_date,	
+							'isAchievement':  isAchievement,
+							'tags':  tags
+						  })	
+
+			
+			Entry(**entry).put()
+			
+			self.response.out.write(json.dumps({'response': 0})) # 0 means success
+
 
 
 class DeleteProjectHandler(Handler):
@@ -617,6 +697,7 @@ app = webapp2.WSGIApplication([
     ('/projects', AddProjectHandler),
     ('/addproject', AddProjectAjax),
     ('/delproject', DeleteProjectHandler),
+    ('/makeentry', MakeEntryAjax),
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),
     ('/welcome', WelcomePageHandler),
