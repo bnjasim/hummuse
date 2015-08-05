@@ -52,8 +52,8 @@ class OpaqueCursor(ndb.Model):
 class SearchCursor(ndb.Model):
 	cursor = ndb.StringProperty(required = True);	
 
-# to keep next project search result cursor
-class ProjectSearchCursor(ndb.Model):
+# to keep next achievement page cursor
+class AchievementsCursor(ndb.Model):
 	cursor = ndb.StringProperty(required = True);	
 
 		
@@ -80,7 +80,7 @@ class Entry(ndb.Model):
 	tags = ndb.StringProperty(repeated = True, indexed = False)
 	# normalized tags eg. "App Engine" --> "appengine" - computed property
 	normtags = ndb.ComputedProperty(lambda self: self._normalize_tags(), repeated = True)
-	project = ndb.KeyProperty(Projects)
+	project = ndb.KeyProperty(Projects, indexed = False)
 	projectName = ndb.StringProperty(indexed = False)
 	isWorkProductive = ndb.BooleanProperty(indexed = False)
 	hoursWorked = ndb.FloatProperty(indexed = False)
@@ -676,8 +676,8 @@ class AjaxTagsHandler(Handler):
 
 
 
-# Project Search - Return Entries corresponding to a project
-class FilterProjectAjaxHandler(Handler):
+# Return all achievement entries
+class AchievementsAjaxHandler(Handler):
 	# post because we are writing to DB - cursor
 	def post(self):
 		user = users.get_current_user()
@@ -687,90 +687,63 @@ class FilterProjectAjaxHandler(Handler):
 		else:
 			user_id = user.user_id()
 			user_ent_key = ndb.Key(Account, user_id)
-			pid = int(self.request.get('pid', default_value=None))
+			
+			cur_id = self.request.get('cursor', default_value=None)
+			start_cursor = None
+			cursor_key = None
+			cursor_obj = None
 
-			if pid:
-				# only if pid is sent, we can search for the project
-				projectKey = ndb.Key(Account, user.user_id(), Projects, pid)
-				#projectObject = projectKey.get()
-				#projectName = projectObject.projectName;
-				#isproductive = projectObject.projectProductive
-				cur_id = self.request.get('cursor', default_value=None)
-				start_cursor = None
-				cursor_key = None
-				cursor_obj = None
+			if cur_id is not None:
+				# load more
+				cursor_key = ndb.Key('AchievementsCursor', int(cur_id), parent = user_ent_key)
+				cursor_obj = memcache.get(user_id+'achievements-cursor')
+				if cursor_obj is None:
+					cursor_obj = cursor_key.get()
+
+				start_cursor = Cursor(urlsafe = cursor_obj.cursor)	
+
+			
+			qry = Entry.query(ancestor = user_ent_key).filter(Entry.isAchievement==True).order(-Entry.date)	
+			entries, next_cursor, more = qry.fetch_page(5, start_cursor=start_cursor)
+			
+			if next_cursor is not None:
 
 				if cur_id is not None:
-					# load more
-					cursor_key = ndb.Key('ProjectSearchCursor', int(cur_id), parent = user_ent_key)
-					cursor_obj = memcache.get(user_id+'filter-project-cursor')
-					if cursor_obj is None:
-						cursor_obj = cursor_key.get()
-				
-					start_cursor = Cursor(urlsafe = cursor_obj.cursor)	
+					cursor_obj.cursor = next_cursor.urlsafe()
+					cursor_obj.put()
+					memcache.set(user_id+'achievements-cursor', cursor_obj)
 
-				# Search only if the key exists
-				if projectKey:
-					p = projectKey.get()
-					pname = p.projectName
-					#logging.error('------\n-------\n'+pname+'\n-----------')	.filter(Entry.project==projectKey)	
-					qry = Entry.query(ancestor = user_ent_key).filter(Entry.project==projectKey).order(-Entry.date)	
-					entries, next_cursor, more = qry.fetch_page(5, start_cursor=start_cursor)
-					#entries = qry.fetch()
-					#next_cursor = None
-					#more = False
-
-					#for e in entries:
-					#	if e.projectName == pname:
-					#		if e.project == projectKey:
-					#			logging.info('------\nBoth Matched-------\n'+pname+'\n-----------')	
-					#		else:
-					#			logging.error('------\nName Matched But not Key-------\n'+pname+'\n'+str(projectKey)+'\n'+str(e.project)+'-----------')		
-
-
-					if next_cursor is not None:
-
-						if cur_id is not None:
-							cursor_obj.cursor = next_cursor.urlsafe()
-							cursor_obj.put()
-							memcache.set(user_id+'filter-project-cursor', cursor_obj)
-
-						else:	
-							all_cursors_query = ndb.gql("SELECT * FROM ProjectSearchCursor WHERE ANCESTOR IS :1", user_ent_key)
-							saved_cursor = list(all_cursors_query)
-							if(saved_cursor): # not empty - update
-								saved_cursor[0].cursor = next_cursor.urlsafe()
-								cursor_key = saved_cursor[0].put()
-								cur_id = cursor_key.id()
-								memcache.set(user_id+'filter-project-cursor', saved_cursor[0], 1800)
-								#logging.error('---------\n------Restored saved cursor--\n--------')
-							else:	
-								cursor_obj = ProjectSearchCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
-								cursor_key = cursor_obj.put()
-								cur_id = cursor_key.id()		
-								memcache.set(user_id+'filter-project-cursor', cursor_obj, 1800)
+				else:	
+					all_cursors_query = ndb.gql("SELECT * FROM AchievementsCursor WHERE ANCESTOR IS :1", user_ent_key)						
+					saved_cursor = list(all_cursors_query)
+					if(saved_cursor): # not empty - update
+						saved_cursor[0].cursor = next_cursor.urlsafe()
+						cursor_key = saved_cursor[0].put()
+						cur_id = cursor_key.id()
+						memcache.set(user_id+'achievements-cursor', saved_cursor[0], 1800)
+						#logging.error('---------\n------Restored saved cursor--\n--------')
+					else:	
+						cursor_obj = AchievementsCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
+						cursor_key = cursor_obj.put()
+						cur_id = cursor_key.id()		
+						memcache.set(user_id+'achievements-cursor', cursor_obj, 1800)
 
 						
-					# entries is not json serializable because of date object
-					results = []
-					logging.error('------\n-------\n'+str(len(entries))+'\n-----------')
-					for entry in entries:
-						entrydict = make_entry_dict(entry)
-						# to conform to the dailybox structure
-						entrybox = {'entries':[entrydict]}
-						entrybox['date'] = entrydict['date']
-						results.append(entrybox) 
+			# entries is not json serializable because of date object
+			results = []
+			logging.error('------\n-------\n'+str(len(entries))+'\n-----------')
+			for entry in entries:
+				entrydict = make_entry_dict(entry)
+				# to conform to the dailybox structure
+				entrybox = {'entries':[entrydict]}
+				entrybox['date'] = entrydict['date']
+				results.append(entrybox) 
 
-					search_results = {"response":0, "results": results, "more": more, "cursor": cur_id}
+			search_results = {"results": results, "more": more, "cursor": cur_id}
 					#logging.error('------\n-------\n'+str(search_results)+'\n-----------')
 
-				else:
-					search_results = {"response":1} # projectId not found	
+		self.response.out.write(json.dumps(search_results))		
 
-				self.response.out.write(json.dumps(search_results))		
-
-			else:	
-				logging.error('------\n-------\nNo pid sent\n-----------')
 
 
 
@@ -810,7 +783,7 @@ app = webapp2.WSGIApplication([
     ('/ajaxhome', AjaxHomeHandler),
     ('/searchtags', AjaxTagsHandler),
     ('/ajaxprojects', AjaxProjectsHandler),
-    ('/filterproject', FilterProjectAjaxHandler),
+    ('/achievementsajax', AchievementsAjaxHandler),
     ('/update', UpdateHandler)
    ], debug=True)
 

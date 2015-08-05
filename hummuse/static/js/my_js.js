@@ -360,8 +360,7 @@ $(document).ready(function(){
   var mainContentDiv = $('#json-div');
   // page state can be changed to projects/dash board etc.
   var page_state = 'all';
-  var search = {}; // keep details such as cursor_id, more etc.
-  var processing = false; // is another ajax search is going on
+  var processing = false; // another ajax search is going on
   projs = []; // list of all projects
 
   // function to extract sentences out of html (string)
@@ -748,16 +747,18 @@ $(document).ready(function(){
  			data_old = jsdata['data'];
 
  		if (data_new.length === 0){
- 			if ($('.initial-loading-container'))
- 				$('.initial-loading-container').remove();
-
+ 			//if ($('.initial-loading-container'))
+ 			//	$('.initial-loading-container').remove();
+ 			// instead of removing set maincontentdiv.html
+ 			mainContentDiv.html('<div class="empty-box finished load">End</div>');
  			finished_load();
  			return;
  		}	
 
  		if (data_old === undefined) {// initial load
  			jsdata = received_data;
- 			$('.initial-loading-container').remove();
+ 			//$('.initial-loading-container').remove();
+ 			mainContentDiv.html('<div class="empty-box"></div>');
  		}
 
  		else {
@@ -842,20 +843,17 @@ $(document).ready(function(){
 
 	// function to render the search by tag results
 	// option 0 indicates search results, 1 indicates project filter result
-	var display_search_results = function(search_results, tag_or_pid, option){
+	var display_search_results = function(search, entity, option){
 		
-		var results = search_results['results'];
-		search['cursor'] = search_results['cursor'];
-		search['more'] = search_results['more'];
-		search['results'] = results;
-
+		var results = search['results'];
+		
 		// main-content-title is appended only in search-button on click event
 		if (!results || results.length===0)
-			$('#main-content-title').html('No results found for <b>'+tag_or_pid+'</b>');
+			$('#main-content-title').html('No results found for <b>'+entity+'</b>');
 		else
-			$('#main-content-title').html('Search results for <b>'+tag_or_pid+'</b>');
+			$('#main-content-title').html('Search results for <b>'+entity+'</b>');
 			
-		
+		// not required as we remove it in success:		
 		if ($('.initial-loading-container'))
 			$('.initial-loading-container').remove();
 		
@@ -889,15 +887,17 @@ $(document).ready(function(){
   				$('a.load-more-click').on('click', function(){
   					// empty and append = html
 					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
-					search_ajax_tag(tag_or_pid, search['cursor']);
+					search_ajax_tag(entity, search['cursor']);
 				});
 			}
 			
-			else {
+			else if (option === 1){
 				$('a.load-more-click').on('click', function(){
   					// empty and append = html
 					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
-					filter_by_project_ajax(tag_or_pid, search['cursor']);
+					//filter_by_project_ajax(entity, search['cursor']);
+					//search_ajax_tag(entity, search['cursor']);
+					achievements_ajax(search['cursor']);
 				});	
 			}	
 		}
@@ -917,6 +917,12 @@ $(document).ready(function(){
 			data: {'tag': ntag, 'cursor': cursor},
 			dataType: 'json',
 			success: function(search_results){
+				if (!cursor) {
+					// initially, empty the maincontent again to remove the loading-gif
+					// As well as to avoid any potential conflicts between any two ajax requests
+					mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+				}	
 				display_search_results(search_results, tag, 0);
 				processing = false;
 			},
@@ -1239,7 +1245,7 @@ $(document).ready(function(){
 		//$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
 		$(this).addClass('left-panel-link-highlight');	
 		var pid = $(this).data('pid');
-		var project = $(this).text();
+		var pname = $(this).text();
 		//alert(project+' '+pid);
 		if(!pid) { // or project === 'All'
 			if (jsdata['data']) {// don't do anything before first data has arrived
@@ -1248,31 +1254,45 @@ $(document).ready(function(){
 				render_content(0);
 			}
 		}
-		else if (!processing){
+		else {
 			mainContentDiv.empty();
 			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-			//search_ajax_tag(project);
-			filter_by_project_ajax(pid);
+			search_ajax_tag(pname);
+			//filter_by_project_ajax(pid);
 		}
 
 		//return false; // prevent default propagation
 	});
+
+	$('#star-panel').on('click', 'a', function(){
+		if (!processing) {
+			mainContentDiv.empty();
+			//page_state = 'search';
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			achievements_ajax();
+		}
+	});
 	
-	//romance = {};
+	
 	// It's very important that cursor is None for the first call
 	// using search['cursor'] can be problematic
-	var filter_by_project_ajax = function(pid, cursor) {
+	var achievements_ajax = function(cursor) {
 		
 		processing = true;
 		$.ajax({
-			url: '/filterproject',
+			url: '/achievementsajax',
 			type: 'POST',
-			data: {'pid':pid, 'cursor':cursor},
+			data: {'cursor':cursor},
 			dataType: 'json',
 			success: function(search_results){
-				results = search_results;
-				display_search_results(search_results, pid, 1); // option 1 
+				if (!cursor) {
+					// initially, empty the maincontent again to remove the loading-gif
+					// As well as to avoid any potential conflicts between two ajax requests
+					mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+				}	
+				display_search_results(search_results, 'achievements', 1); // option 1 
 				processing = false;
 			},
 			error: function(e){
