@@ -357,11 +357,16 @@ $(document).ready(function(){
   jsdata = {}; // json/js data stored globally and later on added to it
   var weeks_loaded = 0; // how many weeks have already been rendered 
   var template = $('#template').html();
+  var template_projects = $('#template-projects').html();
   var mainContentDiv = $('#json-div');
   // page state can be changed to projects/dash board etc.
   var page_state = 'all';
   var processing = false; // another ajax search is going on
-  projs = []; // list of all projects
+  var p_index = 0; // for timer projects listing
+  var projs_arrived = false; // whether projects ajax call returned or not
+  var rendered = false; // whether first rendering of main content took place or not
+  projs = []; // list of all projects in the order of last accessed field
+  projs_dict = {}; // a dictionary with pid as the keys as pname and isprod as values
 
   // function to extract sentences out of html (string)
   // similar to textContent() function
@@ -615,6 +620,7 @@ $(document).ready(function(){
 
   		for(var j=0; j<entries.length; ++j){
   			var entry = entries[j];
+
   			// if tags is [''] need to change to []
   			var t = entry.tags;
   			if (t.length === 1 && t[0] === "")
@@ -622,8 +628,14 @@ $(document).ready(function(){
 
   			// add hrs to total only if project productive
   			// isproductive automatically implies isWork
-  			if(entry['isWork']) // important**** change to isproductive
-  				total += entry['hrs'];
+  			if(entry['isWork']) {
+  				// Get the name from projs_dict
+  				//alert(entry.pname);
+  				entry.proj = projs_dict[entry.pid]['pname'];
+	  			entry.isprod = projs_dict[entry.pid]['isprod'];
+	  			if (entry.isprod)
+  					total += entry['hrs'];
+  			}
 
   			var hrs = entry['hrs'],
   				h = Math.floor(hrs),
@@ -638,7 +650,7 @@ $(document).ready(function(){
 			else if (m > 0)
 				hour_string = m + 'm';
 
-			entry['hours'] = hour_string;
+			entry['hrs_string'] = hour_string;
 			entry['ishz'] = (h === 0 && m === 0); // only if both are zero
 
 			var notes = entry['notes'],
@@ -757,8 +769,13 @@ $(document).ready(function(){
 
  		if (data_old === undefined) {// initial load
  			jsdata = received_data;
+ 			// we will postpone rendering if projs not yet retrieved
+			if (!projs_arrived) 			
+				return;
+			rendered = true;
  			//$('.initial-loading-container').remove();
  			mainContentDiv.html('<div class="empty-box"></div>');
+ 			//console.log('Projects arrived first');
  		}
 
  		else {
@@ -819,10 +836,12 @@ $(document).ready(function(){
 
  		}
 
-
  		render_content(offset);
  	}
 
+
+
+ 	// main page rendering ajax call
 	var make_ajax_call = function(){
 		$.ajax({
 			url: '/ajaxhome',
@@ -883,6 +902,7 @@ $(document).ready(function(){
 		$('#div-load-more').append('<a class="load-more-click">Load >></a>');
 			
   		if (search['more']) {
+  			// tag search
   			if (!option) {	
   				$('a.load-more-click').on('click', function(){
   					// empty and append = html
@@ -890,14 +910,22 @@ $(document).ready(function(){
 					search_ajax_tag(entity, search['cursor']);
 				});
 			}
-			
+			// achievement search
 			else if (option === 1){
 				$('a.load-more-click').on('click', function(){
   					// empty and append = html
 					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
-					//filter_by_project_ajax(entity, search['cursor']);
 					//search_ajax_tag(entity, search['cursor']);
 					achievements_ajax(search['cursor']);
+				});	
+			}	
+			// project search
+			else if (option === 2){
+				$('a.load-more-click').on('click', function(){
+  					// empty and append = html
+					$('#div-load-more').html('<img src="static/images/load-small.gif" alt="loading...">');
+					filter_by_project_ajax(entity, search['cursor']);
+					//search_ajax_tag(entity, search['cursor']);
 				});	
 			}	
 		}
@@ -962,6 +990,7 @@ $(document).ready(function(){
 	}
 
 	// return all projects in last accessed first order
+	// called only once - initially, otherwise double check everything is ok.
 	var ajax_projects = function(){
 
 		$.ajax({
@@ -969,15 +998,32 @@ $(document).ready(function(){
 			type: 'GET',
 			dataType: 'json',
 			success: function(projects){
+				
 				projs = projects.pbox;
+				projs_dict = projects.pdict;
+				projs_arrived = true; // initial loading means can't use projs.length === 0
 				// show the projects in the left panel
 				list_projects_panel();
+
+				// if jsdata is set but not yet rendered, render now
+				// not yet rendered because ajax_projects was delayed
+				if (!rendered && jsdata['data']) {
+					//$('.initial-loading-container').remove();
+ 					mainContentDiv.html('<div class="empty-box"></div>');
+ 					rendered = true; // not important to set
+ 					render_content(0);
+ 					//console.log('Projects arrived last');
+				}
+
 
 				// Also show in the work modal form
 				list_projects_work_form();
 
 				// in the timer header as well
 				$('#timer').find('.truncated').text(projs[0].projectName);
+
+				// in the edit-projects modal as well
+				set_edit_projects_modal();
 
 			},
 			error: function(e){
@@ -1113,8 +1159,7 @@ $(document).ready(function(){
  							$('#add-project-input').val('');
  							$('#add-project-description').val('');
  							$('#add-project-productive')[0].checked = true;
- 							// update the projs - make a new ajax call - NO
- 							//ajax_projects()
+ 							//ajax_projects() 
  							// better retrieve the newly added project in response
  							var new_project = res.project;
  							projs = [new_project].concat(projs); // updated the projs
@@ -1154,7 +1199,21 @@ $(document).ready(function(){
 	});
 
 
+   // ------ EDIT Projects ------------------//
+	$('#edit-projects').on('click', function(){
+		$('#edit-projects-modal').modal({backdrop:'static', keyboard:false});
+		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+		$('#my-fixed-top').css('padding-right', '17px');
+	});
 
+
+
+	var set_edit_projects_modal = function(){
+		var rendered = Mustache.render(template_projects, {'pbox': projs});	
+		//console.log(rendered);
+		$('#edit-projects-modal').find('.modal-body').html(rendered);
+	}
+   //--------END of EDIT Projects ---------------//
 
  	//--------END of Projects---------------------//
 
@@ -1213,8 +1272,8 @@ $(document).ready(function(){
 
     		b.html(projectName+'<span class="caret">');
     		b.data('pid', projs[0].projectId);
-    		b.data('pname', projectName);
-    		b.data("isprod", projs[0].projectProductive);
+    		//b.data('pname', projectName);
+    		//b.data("isprod", projs[0].projectProductive);
 
     		// set the initial tag as the first project name
     		var t = '<div class="tags-added">'+projectName+'</div>',
@@ -1228,8 +1287,8 @@ $(document).ready(function(){
   	  			var temp_a = $(document.createElement("a"));
   	  			temp_a.text(projs[j].projectName); 
   	  			temp_a.data('pid', projs[j].projectId);
-  	  			temp_a.data('pname', projs[j].projectName);
-  	  			temp_a.data('isprod', projs[j].projectProductive);
+  	  			//temp_a.data('pname', projs[j].projectName);
+  	  			//temp_a.data('isprod', projs[j].projectProductive);
   	  			
   	  			temp_li.append(temp_a);
   	  			work_form_dropdown_menu.append(temp_li);
@@ -1258,8 +1317,8 @@ $(document).ready(function(){
 			mainContentDiv.empty();
 			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-			search_ajax_tag(pname);
-			//filter_by_project_ajax(pid);
+			//search_ajax_tag(pname);
+			filter_by_project_ajax(pid);
 		}
 
 		//return false; // prevent default propagation
@@ -1273,6 +1332,34 @@ $(document).ready(function(){
 			achievements_ajax();
 		}
 	});
+
+
+	// It's very important that cursor is None for the first call
+	var filter_by_project_ajax = function(pid, cursor) {
+		
+		processing = true;
+		$.ajax({
+			url: '/filterproject',
+			type: 'POST',
+			data: {'pid':pid, 'cursor':cursor},
+			dataType: 'json',
+			success: function(search_results){
+				if (!cursor) {
+					// initially, empty the maincontent again to remove the loading-gif
+					// As well as to avoid any potential conflicts between two ajax requests
+					mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+				}	
+				results = search_results;
+				display_search_results(search_results, pid, 2); // option 2 
+				processing = false;
+			},
+			error: function(e){
+				alert('Server Error: Search Failed' + e);
+			}
+		}); 
+
+	}
 	
 	
 	// It's very important that cursor is None for the first call
@@ -1305,121 +1392,6 @@ $(document).ready(function(){
    //-----------End of Data Entry-----------------------//
  	
 
-//---------------------BEGIN TIMER----------------------------------//
-//-----------------------------------------------------------------//
-
-	var timer_state_icon = 'play'; //can be only play or pause
-	var timer_active = false;
-	var time_hour = 0;
-	var time_minute = 0;
-	var timer_id = 0; //id returned by setInterval
-	var timer_interval = 1000*60; // 1 minute
-
-	function formatTime(hour, minute){
-	  if( isNaN(hour) || isNaN(minute) ){
-		return('--:--');
-	  }
-	  else{
-	    (minute<10) ? m = '0'+minute: m = ''+minute;
-		(hour<10) ? h = '0'+hour : h = ''+hour;
-		return (h+':'+m);	
-	  }
-	}
-
-	function incrementTime(){
-		time_minute += 1;
-		if (time_minute >= 60){
-			time_hour += 1;
-			time_minute = 0;
-		}
-		$('#timer-time').text(formatTime(time_hour, time_minute));
-		sessionStorage.setItem("hour", time_hour);
-		sessionStorage.setItem("minute", time_minute);
-	}
-
-	// Session recovery of timer state on refresh
-	if(sessionStorage.getItem("timer_icon") !== null){ // If timer is stopped, timer_state_icon will be removed	  
-	  timer_state_icon = sessionStorage.getItem("timer_icon");
-	  time_hour = parseInt(sessionStorage.getItem("hour"), 10);
-	  time_minute = parseInt(sessionStorage.getItem("minute"), 10);
-	  
-	  if(Math.random() < 0.25){ // If user navigates away after 59 seconds whole 1 minute is lost
-	  	time_minute += 1; // So assume 5 navigations per minute (if user starts browsing around)
-	  	sessionStorage.setItem("minute", time_minute);
-	  }
-
-	  timer_active = true;
-	  $('#stop-timer').addClass('stop-timer-active');
-	  $('#timer-time').text(formatTime(time_hour, time_minute));	
-
-	  if(timer_state_icon === 'pause'){  //timer was running when refresh
-	    $('#play-pause-timer').children('div').removeClass('glyphicon-play').addClass('glyphicon-pause');
-		timer_id = setInterval(incrementTime, timer_interval);	
-	  }
-
-	}
-
-	$('#play-pause-timer').on('click', function(){ //currently not playing
-		if(timer_state_icon === 'play'){
-			timer_state_icon = 'pause';
-			$(this).children('div').removeClass('glyphicon-play').addClass('glyphicon-pause');
-			timer_active = true;
-			$('#stop-timer').addClass('stop-timer-active');
-			$('#timer-time').text(formatTime(time_hour, time_minute));
-			timer_id = setInterval(incrementTime, timer_interval);
-			sessionStorage.setItem("timer_icon", 'pause');
-			sessionStorage.setItem("hour", time_hour);
-			sessionStorage.setItem("minute", time_minute);
-		}
-		else if(timer_state_icon === 'pause'){ //currently playing
-			timer_state_icon = 'play';
-			$(this).children('div').removeClass('glyphicon-pause').addClass('glyphicon-play');	
-			clearInterval(timer_id);
-
-			sessionStorage.setItem("timer_icon", 'play');
-		}
-		else{ //timer_state === 'pause'
-			alert("Error in play_pause button");
-		}
-	});
-
-	$('#stop-timer').on('click', function(){
-		if (timer_active){
-			sessionStorage.removeItem("timer_icon");
-			sessionStorage.removeItem("hour");
-			sessionStorage.removeItem("minute");
-
-			timer_active = false;
-			$(this).removeClass('stop-timer-active');
-			if(timer_state_icon === 'pause'){
-				$('#play-pause-timer').children('div').removeClass('glyphicon-pause').addClass('glyphicon-play');
-				timer_state_icon = 'play';
-			}
-			clearInterval(timer_id);
-			$('#stop-timer-modal').modal('show');
-			// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
-			$('#my-fixed-top').css('padding-right','17px');
-			time_hour = 0;
-			time_minute = 0;	
-			$('#timer-time').text(formatTime('--', '--'));	
-		}
-	});
-	// Timer List of Projects Display
-	var p_index = 0;
-	$('#right-caret-arrow').on('click', function(){
-		p_index += 1;
-		p_index = (p_index >= projs.length)? 0 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
-
-	});
-	$('#left-caret-arrow').on('click', function(){
-		p_index -= 1;
-		p_index = (p_index < 0)? projs.length-1 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
-
-	});
-//------------------------------------------------------------//
-//----------------END OF TIMER-------------------------------//
 
 // --------Home Page -----------------------//
 
@@ -1509,10 +1481,10 @@ $(document).ready(function(){
     	  var b = $(this).parent().parent().parent().find('button');
     	  b.html( $(this).html() + '<span class="caret"></span>' );    
     	  b.data( 'pid', $(this).data('pid') );
-    	  b.data('pname', $(this).data('pname'));
-    	  b.data('isprod', $(this).data('isprod'));
+    	  //b.data('pname', $(this).data('pname'));
+    	  //b.data('isprod', $(this).data('isprod'));
     	  //alert(b.data('pname'));
-    	  var tag = b.data('pname'),
+    	  var tag = $(this).text(),
     	  	  t = '<div class="tags-added">'+tag+'</div>',
 		  	  ts = $('#tag-section');
 		 
@@ -1686,9 +1658,9 @@ $(document).ready(function(){
  	// input2 is project id
   	var input2 = $('#project-form-button').data('pid');
    	// project name
-  	var input21 = $('#project-form-button').data('pname');
+  	//var input21 = $('#project-form-button').data('pname');
   	// is project productive - to avoid datastore access
-  	var input22 = $('#project-form-button').data('isprod');
+  	//var input22 = $('#project-form-button').data('isprod');
   	// date
   	var input3 = $('#date-form-button').text().slice(0,15);
   	// hours
@@ -1702,7 +1674,7 @@ $(document).ready(function(){
   	// Tags
   	var input8 = $('#tag-section').data('tags'); // an array
   
-  	var data = {'formkind':input1, 'pid':input2, 'pname':input21, 'isprod':input22,
+  	var data = {'formkind':input1, 'pid':input2, //'pname':input21, 'isprod':input22,
   				'date':input3, 'hours':input4, 'minutes':input5, 'achievement':input6,
   				'notes':input7, 'tags':JSON.stringify(input8) };
 	$.ajax({
@@ -1741,7 +1713,7 @@ $(document).ready(function(){
 		},
 		error: function(e){
 			$('#add-work-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Error: Couldn't add the Data");						
-					}
+		}
 	});  
 
   });
@@ -1819,6 +1791,123 @@ $(document).ready(function(){
 
 
 // --------------End of code for Data specifically -------------//  
+
+
+//---------------------BEGIN TIMER----------------------------------//
+//-----------------------------------------------------------------//
+
+	var timer_state_icon = 'play'; //can be only play or pause
+	var timer_active = false;
+	var time_hour = 0;
+	var time_minute = 0;
+	var timer_id = 0; //id returned by setInterval
+	var timer_interval = 1000*60; // 1 minute
+
+	function formatTime(hour, minute){
+	  if( isNaN(hour) || isNaN(minute) ){
+		return('--:--');
+	  }
+	  else{
+	    (minute<10) ? m = '0'+minute: m = ''+minute;
+		(hour<10) ? h = '0'+hour : h = ''+hour;
+		return (h+':'+m);	
+	  }
+	}
+
+	function incrementTime(){
+		time_minute += 1;
+		if (time_minute >= 60){
+			time_hour += 1;
+			time_minute = 0;
+		}
+		$('#timer-time').text(formatTime(time_hour, time_minute));
+		sessionStorage.setItem("hour", time_hour);
+		sessionStorage.setItem("minute", time_minute);
+	}
+
+	// Session recovery of timer state on refresh
+	if(sessionStorage.getItem("timer_icon") !== null){ // If timer is stopped, timer_state_icon will be removed	  
+	  timer_state_icon = sessionStorage.getItem("timer_icon");
+	  time_hour = parseInt(sessionStorage.getItem("hour"), 10);
+	  time_minute = parseInt(sessionStorage.getItem("minute"), 10);
+	  
+	  if(Math.random() < 0.25){ // If user navigates away after 59 seconds whole 1 minute is lost
+	  	time_minute += 1; // So assume 5 navigations per minute (if user starts browsing around)
+	  	sessionStorage.setItem("minute", time_minute);
+	  }
+
+	  timer_active = true;
+	  $('#stop-timer').addClass('stop-timer-active');
+	  $('#timer-time').text(formatTime(time_hour, time_minute));	
+
+	  if(timer_state_icon === 'pause'){  //timer was running when refresh
+	    $('#play-pause-timer').children('div').removeClass('glyphicon-play').addClass('glyphicon-pause');
+		timer_id = setInterval(incrementTime, timer_interval);	
+	  }
+
+	}
+
+	$('#play-pause-timer').on('click', function(){ //currently not playing
+		if(timer_state_icon === 'play'){
+			timer_state_icon = 'pause';
+			$(this).children('div').removeClass('glyphicon-play').addClass('glyphicon-pause');
+			timer_active = true;
+			$('#stop-timer').addClass('stop-timer-active');
+			$('#timer-time').text(formatTime(time_hour, time_minute));
+			timer_id = setInterval(incrementTime, timer_interval);
+			sessionStorage.setItem("timer_icon", 'pause');
+			sessionStorage.setItem("hour", time_hour);
+			sessionStorage.setItem("minute", time_minute);
+		}
+		else if(timer_state_icon === 'pause'){ //currently playing
+			timer_state_icon = 'play';
+			$(this).children('div').removeClass('glyphicon-pause').addClass('glyphicon-play');	
+			clearInterval(timer_id);
+
+			sessionStorage.setItem("timer_icon", 'play');
+		}
+		else{ //timer_state === 'pause'
+			alert("Error in play_pause button");
+		}
+	});
+
+	$('#stop-timer').on('click', function(){
+		if (timer_active){
+			sessionStorage.removeItem("timer_icon");
+			sessionStorage.removeItem("hour");
+			sessionStorage.removeItem("minute");
+
+			timer_active = false;
+			$(this).removeClass('stop-timer-active');
+			if(timer_state_icon === 'pause'){
+				$('#play-pause-timer').children('div').removeClass('glyphicon-pause').addClass('glyphicon-play');
+				timer_state_icon = 'play';
+			}
+			clearInterval(timer_id);
+			$('#stop-timer-modal').modal('show');
+			// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
+			$('#my-fixed-top').css('padding-right','17px');
+			time_hour = 0;
+			time_minute = 0;	
+			$('#timer-time').text(formatTime('--', '--'));	
+		}
+	});
+	// Timer List of Projects Display
+	$('#right-caret-arrow').on('click', function(){
+		p_index += 1;
+		p_index = (p_index >= projs.length)? 0 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
+
+	});
+	$('#left-caret-arrow').on('click', function(){
+		p_index -= 1;
+		p_index = (p_index < 0)? projs.length-1 : p_index;
+		$('#timer').find('.truncated').text(projs[p_index].projectName);
+
+	});
+//------------------------------------------------------------//
+//----------------END OF TIMER-------------------------------//
+
 
 });
      

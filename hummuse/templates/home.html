@@ -113,7 +113,7 @@
   </div>
   
   <div class="left-panel panel-content">
-    <a>
+    <a id="edit-projects">
       <div class="glyphicon glyphicon-edit lef-panel-icons"></div> 
       Edit Projects
     </a>
@@ -555,6 +555,31 @@
       </div>
     </div>
   </div>
+
+
+<!-- Modal5 - Edit Projects modal -->
+  <div class="modal fade" id="edit-projects-modal" tabindex="-1" role="modal" aria-labelledby="edit-projects-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-my-event">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <h4 class="modal-title" id="edit-projects-modal-label">
+            <div class="glyphicon glyphicon-edit modal-icons"></div> 
+            Edit Your Projects
+          </h4>
+        </div>
+        <div class="modal-body">
+          Form
+        </div>
+        <div class="modal-footer">
+          <!-- No need of data-dismiss as we deal with it in javascript manually using modal('hide')-->
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" data-dismiss="modal">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   
 
 <!-- Mustache template - avoided by jinja -->
@@ -623,7 +648,7 @@
               </td>
 
               <td class="second-column">
-                  {{hours}}
+                  {{hrs_string}}
               </td>  
             </tr>  
             {{/ishz}}
@@ -653,6 +678,33 @@
     </div>    
  
 </script>
+
+
+<script id="template-projects" type="x-tmpl-mustache">
+  <div class="row">
+    <div class="col-md-offset-2 col-md-8">
+      {{#pbox}}
+        <div class="edit-projects-display-div">
+
+          <div class="edit-projects-title">
+            {{projectName}}
+          </div>
+
+          <div class="edit-projects-description">
+            {{projectDescription}}
+          </div> 
+
+          <a class="edit-projects-option">
+            <div class="glyphicon glyphicon-option-vertical"></div>
+          </a>  
+
+
+        </div>
+      {{/pbox}}
+    </div>
+  </div>
+</script>
+
 {% endraw %}
 
 

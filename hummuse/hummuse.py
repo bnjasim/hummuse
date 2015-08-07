@@ -56,12 +56,17 @@ class SearchCursor(ndb.Model):
 class AchievementsCursor(ndb.Model):
 	cursor = ndb.StringProperty(required = True);	
 
+# to keep next project search result cursor
+class ProjectSearchCursor(ndb.Model):
+	cursor = ndb.StringProperty(required = True);	
+
 		
 class Projects(ndb.Model):
 	# Set Account as the parent of a Project
 	projectName = ndb.StringProperty(required = True)
 	projectDescription = ndb.TextProperty()
 	projectCreated = ndb.DateProperty(auto_now_add = True)
+	# may be get rid off projectActive
 	projectActive = ndb.BooleanProperty(default = True)
 	projectShared = ndb.BooleanProperty(default = False)
 	projectProductive = ndb.BooleanProperty(default = True)
@@ -80,9 +85,9 @@ class Entry(ndb.Model):
 	tags = ndb.StringProperty(repeated = True, indexed = False)
 	# normalized tags eg. "App Engine" --> "appengine" - computed property
 	normtags = ndb.ComputedProperty(lambda self: self._normalize_tags(), repeated = True)
-	project = ndb.KeyProperty(Projects, indexed = False)
+	project = ndb.KeyProperty(Projects)
 	projectName = ndb.StringProperty(indexed = False)
-	isWorkProductive = ndb.BooleanProperty(indexed = False)
+	#isWorkProductive = ndb.BooleanProperty(indexed = False)
 	hoursWorked = ndb.FloatProperty(indexed = False)
 	
 	def _normalize_tags(self):
@@ -171,7 +176,7 @@ def make_projects_dict(p):
 	
 	return {'projectName': p.projectName, 
 			'projectId': p.key.id(),
-			'projectDesc': p.projectDescription,
+			'projectDescription': p.projectDescription,
 			'projectActive': p.projectActive,
 			'projectProductive': p.projectProductive,
 			'projectShared': p.projectShared,
@@ -193,14 +198,17 @@ class AjaxProjectsHandler(Handler):
 			user_ent_key = ndb.Key(Account, user_id)
 
 			pbox = []
+			pdict = {} # hashtable with pid as the key
 
 			qry = Projects.query(ancestor = user_ent_key).order(-Projects.projectLastAccessed)
 			all_projects = qry.fetch()
+
 			for p in all_projects:
 				pbox.append(make_projects_dict(p))
+				pdict[p.key.id()] = {'pname': p.projectName, 'isprod': p.projectProductive}
 
 			
-			projects = {'pbox': pbox}		
+			projects = {'pbox': pbox, 'pdict': pdict}		
 			self.response.out.write(json.dumps(projects))		
 
 
@@ -237,6 +245,18 @@ class AddProjectAjax(Handler):
 				self.response.out.write(json.dumps({'response': 2})) # 2 means empty name - can't occur 
 
 
+# transaction to change project last accessed and put the entry
+@ndb.transactional
+def commit_entry_transaction(entry, projectObject):
+	
+	if projectObject is not None:
+		projectObject.projectLastAccessed = datetime.datetime.now()
+		projectObject.projectLastHour = entry['hoursWorked']
+		projectObject.projectEntriesNo = projectObject.projectEntriesNo + 1
+		projectObject.put()
+
+	Entry(**entry).put()
+
 
 # through Ajax POST request
 class MakeEntryAjax(Handler):
@@ -271,16 +291,18 @@ class MakeEntryAjax(Handler):
 			if len(tags) > 10:
 				tags = []
 
+
+			projectObject = None # remains None for event	
 			#logging.error(self.request.get('formkind'))
 			formkind = str( (self.request.get('formkind') ) ) 
 			if formkind == 'work':
 				# project id
 				project = int( self.request.get('pid') )
-				projectName = self.request.get('pname')
-				isproductive = self.request.get('isprod') == 'true'
+				#projectName = self.request.get('pname')
+				#isproductive = self.request.get('isprod') == 'true'
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
-				#projectObject = projectKey.get()
-				#projectName = projectObject.projectName;
+				projectObject = projectKey.get()
+				projectName = projectObject.projectName;
 				#isproductive = projectObject.projectProductive
 				# working time
 				h = self.request.get('hours', default_value=0)
@@ -292,7 +314,6 @@ class MakeEntryAjax(Handler):
 						 	'datakind': formkind,
 						 	'project': projectKey, 
 						 	'projectName': projectName,
-						 	'isWorkProductive': isproductive,
 						 	'notes': notes,
 						 	'date':  ndb_date,	
 						 	'hoursWorked': hours,
@@ -309,8 +330,8 @@ class MakeEntryAjax(Handler):
 							'tags':  tags
 						  })	
 
-			
-			Entry(**entry).put()
+			# call the transaction to change project last accessed and put entry
+			commit_entry_transaction(entry, projectObject)
 			
 			self.response.out.write(json.dumps({'response': 0})) # 0 means success
 
@@ -399,12 +420,12 @@ class MakeEntryHandler(Handler):
 			if formkind == 'work':
 				# project id
 				project = int( self.request.get('project') )
-				projectName = self.request.get('pname')
-				isproductive = self.request.get('isprod') == 'true'
+				#projectName = self.request.get('pname')
+				#isproductive = self.request.get('isprod') == 'true'
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
-				#projectObject = projectKey.get()
-				#projectName = projectObject.projectName;
-				#isproductive = projectObject.projectProductive
+				projectObject = projectKey.get()
+				projectName = projectObject.projectName;
+				isproductive = projectObject.projectProductive
 				# working time
 				h = self.request.get('hours', default_value=0)
 				m = self.request.get('minutes', default_value=0)
@@ -456,59 +477,6 @@ class LoginHandler(webapp2.RequestHandler):
 			self.redirect('/?fresh_user=' + str(status))			
 		
 
-
-# function returns a python dictionary- 
-# representation of an entry object
-def make_entry_dict(e):
-
-	dateString = utils.date_string(e.date)
-	isWork = e.datakind == 'work'
-
-	return {'isWork': isWork, 'date': dateString, 'isachiev': e.isAchievement,
-			'notes': e.notes, 'tags': e.tags, 'proj': e.projectName, 'hrs': e.hoursWorked,
-			'isproductive': e.isWorkProductive};
-		
-
-
-
-# create a new Entry for calculations
-# such as hours and minutes from hoursWorked float property
-class EntryBox:
-	def __init__(self, e):
-		self.dateString = (utils.weeks[e.date.weekday()] + ' ' +
-						  utils.months_array[e.date.month-1] + '-' +
-						  str(e.date.day) + '-' + str(e.date.year) )
-
-		self.datakind = e.datakind
-		self.isAchievement = e.isAchievement
-		self.notes = e.notes
-		self.tags = e.tags
-		self.projectName = e.projectName
-		self.hoursWorked = e.hoursWorked 
-		if e.datakind == 'work':
-			self.hours = int( math.floor(e.hoursWorked) )
-			self.minutes = int( math.ceil( (e.hoursWorked - self.hours) * 60	) )
-		# If the note really large then we have to hide some parts
-		notes = self.notes
-		note_limit = 150 # show first 150 characters - but includes html tags aswell
-		isNotesLarge = len(notes) > note_limit
-		self.isNotesLarge = isNotesLarge
-		# if note is large find an appropriate place to wrap
-		# Find the next </div> or </li> in notes
-		if isNotesLarge:
-			rem_notes = notes[note_limit:]
-			min_div = rem_notes.find('</div>')
-			min_li = rem_notes.find('</li>')
-			pos = min(min_div, min_li)
-			len_tag = 5 if min_li < min_div else 6
-
-			notesCutShort = (notes[ : note_limit + pos] +
-							   '... <a class="show-more-notes">(more)</a>' +
-							   rem_notes[pos: pos+len_tag] +
-							   utils.closeAllTags(rem_notes[pos:])
-							  )
-			self.notesCutShort = notesCutShort
-			
 		
 
 class HomeHandler(Handler):
@@ -525,6 +493,22 @@ class HomeHandler(Handler):
 						 user_name = utils.shorten_name(user.nickname()), 
 						 logout_url = logout_url
 						 )
+
+
+# function returns a python dictionary- 
+# representation of an entry object
+def make_entry_dict(e):
+
+	dateString = utils.date_string(e.date)
+	isWork = e.datakind == 'work'
+	pid = None
+	if e.project:
+		pid = e.project.id()
+
+	return {'isWork': isWork, 'date': dateString, 'isachiev': e.isAchievement,
+			'notes': e.notes, 'tags': e.tags, 'pid': pid, 'hrs': e.hoursWorked};
+		
+
 
 
 # Returns all entries
@@ -676,6 +660,102 @@ class AjaxTagsHandler(Handler):
 
 
 
+# Project Search - Return Entries corresponding to a project
+class FilterProjectAjaxHandler(Handler):
+	# post because we are writing to DB - cursor
+	def post(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect('/welcome')
+			
+		else:
+			user_id = user.user_id()
+			user_ent_key = ndb.Key(Account, user_id)
+			pid = int(self.request.get('pid', default_value=None))
+
+			if pid:
+				# only if pid is sent, we can search for the project
+				projectKey = ndb.Key(Account, user.user_id(), Projects, pid)
+				#projectObject = projectKey.get()
+				#projectName = projectObject.projectName;
+				#isproductive = projectObject.projectProductive
+				cur_id = self.request.get('cursor', default_value=None)
+				start_cursor = None
+				cursor_key = None
+				cursor_obj = None
+
+				if cur_id is not None:
+					# load more
+					cursor_key = ndb.Key('ProjectSearchCursor', int(cur_id), parent = user_ent_key)
+					cursor_obj = memcache.get(user_id+'filter-project-cursor')
+					if cursor_obj is None:
+						cursor_obj = cursor_key.get()
+				
+					start_cursor = Cursor(urlsafe = cursor_obj.cursor)	
+
+				# Search only if the key exists
+				#p = projectKey.get()
+				#pname = p.projectName
+				#logging.error('------\n-------\n'+pname+'\n-----------')	.filter(Entry.project==projectKey)	
+				qry = Entry.query(ancestor = user_ent_key).filter(Entry.project==projectKey).order(-Entry.date)	
+				entries, next_cursor, more = qry.fetch_page(5, start_cursor=start_cursor)
+				#entries = qry.fetch()
+				#next_cursor = None
+				#more = False
+
+				#for e in entries:
+				#	if e.projectName == pname:
+				#		if e.project == projectKey:
+				#			logging.info('------\nBoth Matched-------\n'+pname+'\n-----------')	
+				#		else:
+				#			logging.error('------\nName Matched But not Key-------\n'+pname+'\n'+str(projectKey)+'\n'+str(e.project)+'-----------')		
+
+
+				if next_cursor is not None:
+
+					if cur_id is not None:
+						cursor_obj.cursor = next_cursor.urlsafe()
+						cursor_obj.put()
+						memcache.set(user_id+'filter-project-cursor', cursor_obj)
+
+					else:	
+						all_cursors_query = ndb.gql("SELECT * FROM ProjectSearchCursor WHERE ANCESTOR IS :1", user_ent_key)
+						saved_cursor = list(all_cursors_query)
+						if(saved_cursor): # not empty - update
+							saved_cursor[0].cursor = next_cursor.urlsafe()
+							cursor_key = saved_cursor[0].put()
+							cur_id = cursor_key.id()
+							memcache.set(user_id+'filter-project-cursor', saved_cursor[0], 1800)
+							#logging.error('---------\n------Restored saved cursor--\n--------')
+						else:	
+							cursor_obj = ProjectSearchCursor(parent = user_ent_key, cursor = next_cursor.urlsafe())
+							cursor_key = cursor_obj.put()
+							cur_id = cursor_key.id()		
+							memcache.set(user_id+'filter-project-cursor', cursor_obj, 1800)
+						
+				# entries is not json serializable because of date object
+				results = []
+				logging.error('------\n-------\n'+str(len(entries))+'\n-----------')
+				for entry in entries:
+					entrydict = make_entry_dict(entry)
+					# to conform to the dailybox structure
+					entrybox = {'entries':[entrydict]}
+					entrybox['date'] = entrydict['date']
+					results.append(entrybox) 
+					
+				search_results = {"response":0, "results": results, "more": more, "cursor": cur_id}
+				#logging.error('------\n-------\n'+str(search_results)+'\n-----------')
+
+			else:
+				logging.error('------\n-------\nNo pid sent\n-----------')
+				search_results = {"response":1} # projectId not found	
+
+			self.response.out.write(json.dumps(search_results))		
+
+
+
+
+
 # Return all achievement entries
 class AchievementsAjaxHandler(Handler):
 	# post because we are writing to DB - cursor
@@ -784,6 +864,7 @@ app = webapp2.WSGIApplication([
     ('/searchtags', AjaxTagsHandler),
     ('/ajaxprojects', AjaxProjectsHandler),
     ('/achievementsajax', AchievementsAjaxHandler),
+    ('/filterproject', FilterProjectAjaxHandler),
     ('/update', UpdateHandler)
    ], debug=True)
 

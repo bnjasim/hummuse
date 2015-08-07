@@ -453,6 +453,10 @@ body.leave-fixed-space{
   left: 30%;
 }
 
+#div-load-more img{
+  margin-left: 10px;
+}
+
 a.load-more-click:hove{
   text-decoration: none;
 }
@@ -725,7 +729,7 @@ label{
 
   .modal-my-event{
     width: 780px;
-    margin-top: 3%;
+    margin-top: 1%;
   }
 }
 
@@ -741,4 +745,39 @@ label{
 
 .my-modal-footer{
   padding: 12px 15px;
+}
+
+
+
+
+
+.edit-projects-display-div{
+  min-height: 50px;
+}
+
+.edit-projects-title{
+  display: inline-block;
+}
+
+.edit-projects-description{
+  display: inline-block;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+.edit-projects-option{
+  float: right;
+  color: #999;
+  opacity: 0.8;
+  min-width: 40px;
+}
+
+.edit-projects-option div{
+  margin-left: 15px;
+  font-size: 18px;
+}
+
+#edit-projects-modal .modal-body{
+  background-color: #f5f5f5;
 }
