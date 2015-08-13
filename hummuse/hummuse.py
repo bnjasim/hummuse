@@ -174,14 +174,13 @@ class AddProjectHandler(Handler):
 
 def make_projects_dict(p):
 	
-	return {'projectName': p.projectName, 
-			'projectId': p.key.id(),
-			'projectDescription': p.projectDescription,
-			'projectActive': p.projectActive,
-			'projectProductive': p.projectProductive,
-			'projectShared': p.projectShared,
-			'projectLastHour': p.projectLastHour,
-			'projectEntriesNo': p.projectEntriesNo
+	return {'pname': p.projectName, 
+			'pdesc': p.projectDescription,
+			'pactive': p.projectActive,
+			'isprod': p.projectProductive,
+			'pshared': p.projectShared,
+			'plasthour': p.projectLastHour,
+			'pentriesno': p.projectEntriesNo
 			}
 
 
@@ -204,8 +203,8 @@ class AjaxProjectsHandler(Handler):
 			all_projects = qry.fetch()
 
 			for p in all_projects:
-				pbox.append(make_projects_dict(p))
-				pdict[p.key.id()] = {'pname': p.projectName, 'isprod': p.projectProductive}
+				pbox.append({'projectId':p.key.id()}) 
+				pdict[p.key.id()] = make_projects_dict(p)
 
 			
 			projects = {'pbox': pbox, 'pdict': pdict}		
@@ -230,7 +229,7 @@ class AddProjectAjax(Handler):
 			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
 			all_projects = list(p_cursor)
 			all_projects_name = [p.projectName for p in all_projects]
-			if (pname):
+			if (pname and len(pname) <= 40):
 				if (pname not in all_projects_name):
 					pro = Projects(parent = user_ent_key, 
 								   projectName=pname, 
@@ -238,11 +237,38 @@ class AddProjectAjax(Handler):
 								   projectProductive = isprod)
 					pkey = pro.put()
 					new_project = make_projects_dict( pkey.get() )
-					self.response.out.write(json.dumps({'response': 0, 'project':new_project})) # 0 means success
+					self.response.out.write(json.dumps({'response': 0, 'project':new_project,'proj':{'projectId':pkey.id()} })) # 0 means success
 				else:
 					self.response.out.write(json.dumps({'response': 1})) # 1 means already exists
 			else:
 				self.response.out.write(json.dumps({'response': 2})) # 2 means empty name - can't occur 
+
+
+# Edit multiple projects at once
+class EditProjectsAjax(Handler):
+	
+	def post(self):
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/welcome'))
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())
+			edits = json.loads(self.request.get('editedprojs')) 
+			logging.error('\n---------------\n'+str(edits)+'\n-------------\n')
+			projectObjects = ndb.get_multi([ndb.Key( 'Projects', int(p['pid']), parent = user_ent_key) for p in edits])
+			
+			
+			for i, p in enumerate(projectObjects):
+				p.projectName = edits[i]['pname']
+				p.projectDescription = edits[i]['pdesc']
+				p.projectProductive = edits[i]['isprod']
+			
+			ndb.put_multi(projectObjects)	
+
+			self.response.out.write(json.dumps({'response': 'success'})) # success			
+
+
 
 
 # transaction to change project last accessed and put the entry
@@ -334,26 +360,6 @@ class MakeEntryAjax(Handler):
 			commit_entry_transaction(entry, projectObject)
 			
 			self.response.out.write(json.dumps({'response': 0})) # 0 means success
-
-
-
-class DeleteProjectHandler(Handler):
-	
-	def post(self):
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect(users.create_login_url('/welcome'))
-			
-		else:
-			user_ent_key = ndb.Key(Account, user.user_id())
-			project_id = self.request.get('key_id')
-			project_key = ndb.Key( 'Projects', int(project_id), parent = user_ent_key )
-			p = project_key.get()
-			if (p):
-				p.projectActive = False
-				p.put()
-				message = format("Project \""+ p.projectName +"\" deleted successfully! ")
-				self.redirect(users.create_login_url('/new_user'))
 
 
 
@@ -855,7 +861,7 @@ app = webapp2.WSGIApplication([
 	('/', HomeHandler),
     ('/projects', AddProjectHandler),
     ('/addproject', AddProjectAjax),
-    ('/delproject', DeleteProjectHandler),
+    ('/editprojs', EditProjectsAjax),
     ('/makeentry', MakeEntryAjax),
     ('/data', MakeEntryHandler),
     ('/login', LoginHandler),

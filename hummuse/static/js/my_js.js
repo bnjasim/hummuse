@@ -642,11 +642,12 @@ $(document).ready(function(){
 				m = Math.ceil((hrs - h) * 60);
 			
 			var hour_string = '';
-			if (h > 0)
+			if (h > 0) {
 				if (m > 0)
 					hour_string = h + 'h ' + m + 'm';
 				else
 					hour_string = h + 'h';
+			}	
 			else if (m > 0)
 				hour_string = m + 'm';
 
@@ -657,17 +658,20 @@ $(document).ready(function(){
 				note_limit = 300, //  #characters not including html tags
 				isnotebig = false;
 
-			if (!entry['shortnotes'])	// the entry is not altered already
+
+			// if the entry is not altered already	
+			if (!entry['shortnotes']) {
 				var input1 = document.createElement("div");
+				//console.log(input1);
 				input1.innerHTML = notes;
 				notes_text = input1.textContent;
 				isnotebig = notes_text.length > note_limit;
 				if (isnotebig) 
-				entry['shortnotes'] = formShortNotes(notes_text, note_limit);
+					entry['shortnotes'] = formShortNotes(notes_text, note_limit);
+			}	
 					
-			entry['isnbig'] = isnotebig;
-
-			
+			if (!entry['isnbig']) // if not previously set
+				entry['isnbig'] = isnotebig;
 
   		}
 
@@ -706,14 +710,19 @@ $(document).ready(function(){
 
   				var rendered = Mustache.render(template, daybox);
   				// attach to the DOM
+  				// set the date in the date-box
+  				$('.date-box').last().html(daybox.date);
   				// insert to the daily-box empty-box for smooth loading without jumps
   				mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
-  				mainContentDiv.append('<div class="empty-box"></div>');
+  				mainContentDiv.append('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
   				if (window.MathJax && MathJax.Hub)
   					MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
   			}
 
+  			// collapse full-notes if clicked on All
+  			$('.short-note').css('display', 'inline');
+  			$('.full-note').css('display', 'none');
 
 			$('a.show-more-notes').on('click', function(){
 				$(this).closest('.short-note').css("display", "none");
@@ -762,7 +771,7 @@ $(document).ready(function(){
  			//if ($('.initial-loading-container'))
  			//	$('.initial-loading-container').remove();
  			// instead of removing set maincontentdiv.html
- 			mainContentDiv.html('<div class="empty-box finished load">End</div>');
+ 			mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box finished load"></div>');
  			finished_load();
  			return;
  		}	
@@ -774,7 +783,7 @@ $(document).ready(function(){
 				return;
 			rendered = true;
  			//$('.initial-loading-container').remove();
- 			mainContentDiv.html('<div class="empty-box"></div>');
+ 			mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
  			//console.log('Projects arrived first');
  		}
 
@@ -822,6 +831,7 @@ $(document).ready(function(){
  				if (page_state === 'all'){
  					// remove the last daily-box from the DOM
  					$('.daily-box').last().remove();
+ 					$('.date-box').last().remove();
  					offset = data_old.length - 1;
  				}
 
@@ -867,9 +877,9 @@ $(document).ready(function(){
 		var results = search['results'];
 		
 		// main-content-title is appended only in search-button on click event
-		if (!results || results.length===0)
+		if (!results || results.length===0 && !option)
 			$('#main-content-title').html('No results found for <b>'+entity+'</b>');
-		else
+		else if (!option)
 			$('#main-content-title').html('Search results for <b>'+entity+'</b>');
 			
 		// not required as we remove it in success:		
@@ -884,9 +894,9 @@ $(document).ready(function(){
   			entry_common_computations(entrybox.entries); // this alters the entry
   			
 			var rendered = Mustache.render(template, entrybox);
-  			
+  			$('.date-box').last().html(entrybox.date);
   			mainContentDiv.find('.empty-box').html(rendered).removeClass('empty-box').addClass('daily-box');
-  			mainContentDiv.append('<div class="empty-box"></div>');
+  			mainContentDiv.append('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
   			if (window.MathJax && MathJax.Hub)
   				MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
 
@@ -948,8 +958,8 @@ $(document).ready(function(){
 				if (!cursor) {
 					// initially, empty the maincontent again to remove the loading-gif
 					// As well as to avoid any potential conflicts between any two ajax requests
-					mainContentDiv.empty();
-					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+					//mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
 				}	
 				display_search_results(search_results, tag, 0);
 				processing = false;
@@ -964,6 +974,7 @@ $(document).ready(function(){
 		return a<b?a:b;
 
 	}
+
 	// render the retrieved projects in the div in left panel
 	var list_projects_panel = function() {
 		var pro_limit = 6;
@@ -973,7 +984,7 @@ $(document).ready(function(){
 		ul.append('<li><a class="left-panel-link-highlight">All</a></li>');
 		for(var i=0; i<min(projs.length,pro_limit); ++i) {
 			var p = projs[i];
-			ul.append('<li><a data-pid=' + p.projectId + '>' + p.projectName+'</a></li>');
+			ul.append('<li><a data-pid=' + p.projectId + '>' + projs_dict[p.projectId]['pname']+'</a></li>');
 		}
 
 		if (projs.length > pro_limit){
@@ -982,7 +993,7 @@ $(document).ready(function(){
 				for(i=pro_limit; i<projs.length; ++i){
 					$('#load-more-projects').css('display', 'none');
 					var p = projs[i];
-					ul.append('<li><a data-pid=' + p.projectId + '>' + p.projectName+'</a></li>');
+					ul.append('<li><a data-pid=' + p.projectId + '>' + projs_dict[p.projectId]['pname'] +'</a></li>');
 				}
 
 			});
@@ -1009,21 +1020,24 @@ $(document).ready(function(){
 				// not yet rendered because ajax_projects was delayed
 				if (!rendered && jsdata['data']) {
 					//$('.initial-loading-container').remove();
- 					mainContentDiv.html('<div class="empty-box"></div>');
+ 					mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
  					rendered = true; // not important to set
  					render_content(0);
  					//console.log('Projects arrived last');
 				}
 
 
-				// Also show in the work modal form
+				// Also show in the work modal form Why?
+				// Because we may click on the add work modal before data arrives
+				// in that case projects will be filled as soon as it arrives
 				list_projects_work_form();
+				set_edit_projects_modal();
 
 				// in the timer header as well
-				$('#timer').find('.truncated').text(projs[0].projectName);
+				$('#timer').find('.truncated').text(projs_dict[projs[0].projectId]['pname']);
 
 				// in the edit-projects modal as well
-				set_edit_projects_modal();
+				//set_edit_projects_modal();
 
 			},
 			error: function(e){
@@ -1086,9 +1100,9 @@ $(document).ready(function(){
   		tag = tag.trim();
   		if (tag && !processing){
   			// make sure that there is already no ajax request running behind the scenes
-  			mainContentDiv.empty();
+  			//mainContentDiv.empty();
 			//summary_state = 'search';
-			mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			mainContentDiv.html('<div id="main-content-title"><div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
   			search_ajax_tag(tag);
   		}
   	});
@@ -1100,7 +1114,7 @@ $(document).ready(function(){
 		// check if p is present in projs
 		// convert p is already in lowercase no spaces
 		for (var i=0; i<projs.length; ++i){
-			var proj = projs[i].projectName.toLowerCase().trim().replace(/ /g, '');
+			var proj = projs_dict[projs[i].projectId]['pname'].toLowerCase().trim().replace(/ /g, '');
 			if (p === proj)
 				return true;
 		}
@@ -1127,8 +1141,8 @@ $(document).ready(function(){
 
  		var projectName = $('#add-project-input').val().trim().replace(/\s+/g, ' ');
  		var p = projectName.replace(/ /g, '').toLowerCase();
- 		// if projectName is not empty
- 		if (p.length > 0){
+ 		// if projectName is not empty or not too long
+ 		if (p.length > 0 && p.length <= 40){
  			// check if project name already exists in projs
  			if (!alreadyExistingProject(p)){
  				$('#add-project-footer-div').css('left', '40%');
@@ -1159,19 +1173,22 @@ $(document).ready(function(){
  							$('#add-project-input').val('');
  							$('#add-project-description').val('');
  							$('#add-project-productive')[0].checked = true;
- 							//ajax_projects() 
- 							// better retrieve the newly added project in response
- 							var new_project = res.project;
- 							projs = [new_project].concat(projs); // updated the projs
- 							list_projects_panel();
- 							list_projects_work_form();
- 							p_index += 1; 
-							
+
  							// display success message at the footer and close the modal
  							fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Project Added Successfully").find('span').css('color','green');
  							setTimeout(function(){ $('#add-project-modal').modal('hide'); }, 1200);
  							// remove 17px padding from my-fixed-top navbar
  							//$('#my-fixed-top').css('padding-right', '0px');
+ 							
+ 							var new_project = res.project;
+ 							var new_proj = res.proj;
+ 							projs = [new_proj].concat(projs); // updated the projs
+ 							projs_dict[new_proj['projectId']] = new_project;
+ 							list_projects_panel();
+ 							list_projects_work_form();
+ 							p_index += 1; 
+							
+ 							
 
  						}
 
@@ -1186,9 +1203,11 @@ $(document).ready(function(){
  			}
  		}
 
- 		else {
+ 		else if (p.length === 0){
  			$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name can't be empty");
  		}
+ 		else
+ 			$('#add-project-footer-div').html("<span class='glyphicon glyphicon-remove-circle'></span>Project Name can't more than 40 characters");	
  	});
 
  	$('#add-project').on('click', function(){
@@ -1199,20 +1218,206 @@ $(document).ready(function(){
 	});
 
 
+
+
+
    // ------ EDIT Projects ------------------//
 	$('#edit-projects').on('click', function(){
+		set_edit_projects_modal();
+		$('#edit-projects-footer-div').empty();
 		$('#edit-projects-modal').modal({backdrop:'static', keyboard:false});
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
 	});
 
+	// paste content - only copy the text not the styling
+	$(document).on('paste','[contenteditable]',function(e) {
+    	e.preventDefault();
+    	var text = (e.originalEvent || e).clipboardData.getData('text/plain') || prompt('Paste something..');
+    	window.document.execCommand('insertText', false, text);
+    	// if inside project-title - clear the field
+    	if ($(this).attr('class') === 'edit-projects-title'){
+    		$(this).html('');
+    	}
+	});
 
+	// prevent drag and drop text
+	$(document).on('drop','[contenteditable]',function(e) {
+    	e.preventDefault();
+    	//var text = (e.originalEvent || e).clipboardData.getData('text/plain') || prompt('Paste something..');
+    	//window.document.execCommand('insertText', false, text);
+	});	
 
+	// prevent inserting div on enter in contenteditable
+	//$('div[contenteditable]').keydown(function(e) {
+    	// trap the return key being pressed
+   // 	if (e.keyCode === 13) {
+      	// insert 2 br tags (if only one br tag is inserted the cursor won't go to the next line)
+    //  	document.execCommand('insertHTML', false, '<br><br>');
+      	// prevent the default behaviour of return key pressed
+     // 	return false;
+    //	}
+  	//});
+	var edited_projects = []; 
 	var set_edit_projects_modal = function(){
-		var rendered = Mustache.render(template_projects, {'pbox': projs});	
+		// need to create pbox to send to the template
+		var pbox = [];
+		for (var i=0; i<projs.length; ++i){
+			var proj = projs_dict[projs[i]['projectId']];
+			pbox.push({'pid':projs[i].projectId, 'pname':proj.pname, 'pdesc':proj.pdesc, 'isprod':proj.isprod});
+		}
+		var rendered = Mustache.render(template_projects, {'pbox': pbox});	
+		edited_projects = []; // reset every time edit modal is shown
 		//console.log(rendered);
 		$('#edit-projects-modal').find('.modal-body').html(rendered);
+
+		// set the event listeners
+		// To rename a project - shouldn't allow more than 40 characters
+		$('.edit-projects-display-div').find('ul.dropdown-menu li.edit-projects-rename').on('click', 'a', function(){
+			var p = $(this).parent().parent().parent().parent();
+			var pid = p.attr('id');
+			if (edited_projects.indexOf(pid) < 0) 
+				edited_projects.push(pid);
+			//alert(p.find('.edit-projects-title').text());
+			var title = p.find('.edit-projects-title');
+			title.attr('contenteditable', 'true');
+			title.focus();
+		});
+
+		// if pressed enter inside edit-projects-title contenteditable div, exit it
+		$('.edit-projects-title').keydown(function(event){
+			if(event.keyCode === 13)
+				$(this).attr('contenteditable', 'false');
+		});
+
+		/*// more than 40 character 
+		$('.edit-projects-title').keydown(function(event){
+			//alert($(this).text());
+			var t = $(this).text();
+			if(t.length >= 40){
+				if (event.keyCode !== 8){
+				  alert('Project Name exceeds 40 characters!');
+				  $(this).text(t.slice(0,40));
+			    } 	
+			}
+		});		*/
+		// more than 40 character 
+		$('.edit-projects-title').keyup(function(event){
+			//alert($(this).text());
+			var t = $(this).text();
+			if(t.length >= 40){
+				if (event.keyCode !== 8){
+				  alert('Project Name exceeds 40 characters!');
+				  $(this).text(t.slice(0,40));
+			    } 	
+			}
+		});		
+
+		// To change the description of a project
+		$('.edit-projects-display-div').find('ul.dropdown-menu li.edit-projects-change-desc').on('click', 'a', function(){
+			var p = $(this).parent().parent().parent().parent();
+			var pid = p.attr('id');
+			if (edited_projects.indexOf(pid) < 0) 
+				edited_projects.push(pid);
+			//alert(p.find('.edit-projects-title').text());
+			var desc = p.find('.edit-projects-description');
+			desc.attr('contenteditable', 'true');
+			desc.focus();
+		});
+		
+		// To change productivity true/false
+		$('.edit-projects-display-div').find('ul.dropdown-menu li.edit-projects-set-prod').on('click', 'a', function(){
+			var p = $(this).parent().parent().parent().parent();
+			var pid = p.attr('id');
+			if (edited_projects.indexOf(pid) < 0) 
+				edited_projects.push(pid);
+			//alert(p.find('.edit-projects-title').text());
+			var prod = p.find('.edit-projects-set-prod');
+			if (prod.data('prod')){
+				prod.data('prod', false);
+				prod.html('<a><div class="glyphicon glyphicon-ok edit-projects-dropdown-icon"></div>Set as Productive </a>')
+				p.find('.edit-projects-productive').addClass('unproductive').text('Unproductive');
+			}
+			else{
+				prod.data('prod', true);
+				prod.html('<a><div class="glyphicon glyphicon-remove edit-projects-dropdown-icon"></div>Set as Unproductive </a>');
+				p.find('.edit-projects-productive').removeClass('unproductive').text('Productive');
+			}
+
+		});		
+
 	}
+
+	$('#edit-projects-submit').on('click', function(){
+		// only if some projects need to be changed
+		if (edited_projects.length > 0){
+  			var fdiv = $('#edit-projects-footer-div');
+  			$(this).prop('disabled', true); // disable the button
+  			fdiv.css('left', '45%');
+ 			fdiv.html('<img src="static/images/load-small.gif" alt="processing...">');
+ 			$('#edit-projects-cancel').prop('disabled', true);
+ 			$('#edit-projects-close').prop('disabled', true);
+
+ 			// collect all projects that need to be sumbitted for update
+ 			var edprojs = [];
+
+ 			for(var i=0; i<edited_projects.length; ++i){
+ 				var pid = edited_projects[i];
+ 				var display_div = $('#'+pid);
+ 				var pname = display_div.find('.edit-projects-title').text().trim().replace('\n','');
+ 				console.log(pname);
+ 				var pdesc = display_div.find('.edit-projects-description').text().trim();
+ 				var isprod = display_div.find('.edit-projects-set-prod').data('prod');
+
+ 				edprojs.push({'pid':pid, 'pname':pname, 'pdesc':pdesc, 'isprod':isprod});
+ 			}
+
+ 			// ajax call to POST the edited projects
+ 			$.ajax({
+
+				url: '/editprojs',
+				type: 'POST',
+				dataType: 'json',
+				data: {'editedprojs': JSON.stringify(edprojs)},
+				success: function(res){
+					$('#edit-projects-submit').prop('disabled', false);
+ 					$('#edit-projects-cancel').prop('disabled', false);
+ 					$('#edit-projects-close').prop('disabled', false);
+ 					
+ 					fdiv.css('left', '10px');
+ 					if (res.response) {// success
+ 						// display success message at the footer and close the modal
+ 						fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Edits Saved Successfully").find('span').css('color','green');
+ 						setTimeout(function(){ $('#edit-projects-modal').modal('hide'); }, 1200);
+
+ 						// update projs_dict for each edited project
+ 						for (var i=0; i<edprojs.length; ++i) {
+ 							var e = edprojs[i];
+ 							projs_dict[parseInt(e.pid, 10)] = {'pname':e.pname, 'pdesc':e.pdesc, 'isprod':e.isprod, 'pactive':true, 'pshared':false, 'plasthour':0, 'pentriesno':0};
+ 						}
+
+ 						// refresh the main content div
+ 						mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
+						render_content(0);		
+ 						
+ 					}	
+ 				},
+
+ 				error: 	function(error){ 
+ 					fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Server Error! Couldn't edit").css('left', '10px');
+ 				}
+ 			});	
+ 						
+ 		}
+
+ 		else{
+ 			$('#edit-projects-footer-div').html("<span class='glyphicon glyphicon-ok-circle'></span>No Changes to Save").find('span').css('color','green');
+ 			setTimeout(function(){ $('#edit-projects-modal').modal('hide'); }, 1200);
+ 		}
+	});
+
+
+
    //--------END of EDIT Projects ---------------//
 
  	//--------END of Projects---------------------//
@@ -1225,6 +1430,7 @@ $(document).ready(function(){
 		$('#add-work-modal').modal({backdrop:'static', keyboard:false});
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
+		list_projects_work_form();
 	});
 
    $('#add-work-cancel').click(function(){
@@ -1268,7 +1474,7 @@ $(document).ready(function(){
   		// Execute the code only for data.html not for project.html etc.
   		if(work_form_dropdown_menu[0]) {
   			var b = $('#project-form-button');
-  			var projectName = projs[0].projectName;
+  			var projectName = projs_dict[projs[0].projectId]['pname'];
 
     		b.html(projectName+'<span class="caret">');
     		b.data('pid', projs[0].projectId);
@@ -1285,7 +1491,7 @@ $(document).ready(function(){
     		for(var j=0; j<projs.length; ++j){
   	  			var temp_li = $(document.createElement("li"));
   	  			var temp_a = $(document.createElement("a"));
-  	  			temp_a.text(projs[j].projectName); 
+  	  			temp_a.text(projs_dict[projs[j].projectId]['pname']); 
   	  			temp_a.data('pid', projs[j].projectId);
   	  			//temp_a.data('pname', projs[j].projectName);
   	  			//temp_a.data('isprod', projs[j].projectProductive);
@@ -1297,6 +1503,7 @@ $(document).ready(function(){
 		}
 	}
 
+	// filter by projects
 	// on() works for dynamically added contents  but click() doesn't
 	// shouldn't be invoked for ...show all which doesn't have an li
 	$('#projects-panel').on('click', 'li a', function(){
@@ -1308,13 +1515,13 @@ $(document).ready(function(){
 		//alert(project+' '+pid);
 		if(!pid) { // or project === 'All'
 			if (jsdata['data']) {// don't do anything before first data has arrived
-				mainContentDiv.empty();
-				mainContentDiv.append('<div class="empty-box"></div>');
+				//mainContentDiv.empty();
+				mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
 				render_content(0);
 			}
 		}
 		else {
-			mainContentDiv.empty();
+			//mainContentDiv.empty();
 			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
 			//search_ajax_tag(pname);
@@ -1326,7 +1533,7 @@ $(document).ready(function(){
 
 	$('#star-panel').on('click', 'a', function(){
 		if (!processing) {
-			mainContentDiv.empty();
+			//mainContentDiv.empty();
 			//page_state = 'search';
 			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
 			achievements_ajax();
@@ -1347,8 +1554,8 @@ $(document).ready(function(){
 				if (!cursor) {
 					// initially, empty the maincontent again to remove the loading-gif
 					// As well as to avoid any potential conflicts between two ajax requests
-					mainContentDiv.empty();
-					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+					//mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
 				}	
 				results = search_results;
 				display_search_results(search_results, pid, 2); // option 2 
@@ -1376,8 +1583,8 @@ $(document).ready(function(){
 				if (!cursor) {
 					// initially, empty the maincontent again to remove the loading-gif
 					// As well as to avoid any potential conflicts between two ajax requests
-					mainContentDiv.empty();
-					mainContentDiv.html('<div id="main-content-title"></div><div class="empty-box"></div>');
+					//mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
 				}	
 				display_search_results(search_results, 'achievements', 1); // option 1 
 				processing = false;
@@ -1389,7 +1596,6 @@ $(document).ready(function(){
 
 	}
 
-   //-----------End of Data Entry-----------------------//
  	
 
 
@@ -1698,8 +1904,8 @@ $(document).ready(function(){
  				setTimeout(function(){ $('#add-work-modal').modal('hide'); }, 1200);
  				// Remove the tags and notes
  				$('#notes-form').html('');
- 				$('#tag-section').empty().append('<div class="tags-added">'+projs[0].projectName+'</div>');
- 				$('#tag-section').data = [projs[0].projectName];
+ 				$('#tag-section').empty().append('<div class="tags-added">'+projs_dict[projs[0].projectId]['pname']+'</div>');
+ 				$('#tag-section').data = [projs_dict[projs[0].projectId]['pname']];
 
  				// remove 17px padding from my-fixed-top navbar
  				//$('#my-fixed-top').css('padding-right', '0px');
@@ -1772,7 +1978,7 @@ $(document).ready(function(){
 
  				// Refresh the main content
  				jsdata = {};
- 				mainContentDiv.empty();
+ 				//mainContentDiv.empty();
  				mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"><div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>');
  				make_ajax_call();
 
@@ -1896,13 +2102,13 @@ $(document).ready(function(){
 	$('#right-caret-arrow').on('click', function(){
 		p_index += 1;
 		p_index = (p_index >= projs.length)? 0 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
+		$('#timer').find('.truncated').text(projs_dict[projs[p_index].projectId]['pname']);
 
 	});
 	$('#left-caret-arrow').on('click', function(){
 		p_index -= 1;
 		p_index = (p_index < 0)? projs.length-1 : p_index;
-		$('#timer').find('.truncated').text(projs[p_index].projectName);
+		$('#timer').find('.truncated').text(projs_dict[projs[p_index].projectId]['pname']);
 
 	});
 //------------------------------------------------------------//

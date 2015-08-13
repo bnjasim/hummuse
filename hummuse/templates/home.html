@@ -180,6 +180,10 @@
 <div class="col-md-8 col-md-pull-2" id="json-div">
   <!-- Content displaying json data is moved to moustache-
        template file -->
+
+  <!-- This will be destroyed by js -->     
+  <div class="col-md-8 date-box"></div><div class="clearfix"></div>
+       
   <div class="empty-box">
     <!-- ajax data -->
   </div>       
@@ -242,7 +246,7 @@
           </form>
         </div>
         <div class="modal-footer">
-          <div id="add-project-footer-div"></div>
+          <div id="add-project-footer-div" class="footer-div"></div>
           <!-- No need of data-dismiss as we deal with it in javascript manually using modal('hide')-->
           <button id="add-project-cancel" type="button" class="btn btn-default">Cancel</button>
           <button id="add-project-submit" type="button" class="btn btn-primary">Submit</button>
@@ -443,7 +447,7 @@
         </div>
 
         <div class="modal-footer my-modal-footer">
-          <div id="add-work-footer-div"></div>
+          <div id="add-work-footer-div" class="footer-div"></div>
           <button id="add-work-cancel" type="button" class="btn btn-default">Cancel</button>
           <button id="add-work-submit" type="button" class="btn btn-primary">Submit</button>
         </div>
@@ -548,7 +552,7 @@
         </div>
 
         <div class="modal-footer">
-          <div id="add-event-footer-div"></div>
+          <div id="add-event-footer-div" class="footer-div"></div>
           <button id="add-event-cancel" type="button" class="btn btn-default">Cancel</button>
           <button id="add-event-submit" type="button" class="btn btn-primary">Submit</button>
         </div>
@@ -562,7 +566,7 @@
     <div class="modal-dialog modal-my-event">
       <div class="modal-content">
         <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <button type="button" id="edit-projects-close" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
           <h4 class="modal-title" id="edit-projects-modal-label">
             <div class="glyphicon glyphicon-edit modal-icons"></div> 
             Edit Your Projects
@@ -572,9 +576,10 @@
           Form
         </div>
         <div class="modal-footer">
+          <div id="edit-projects-footer-div" class="footer-div"></div>
           <!-- No need of data-dismiss as we deal with it in javascript manually using modal('hide')-->
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-success" data-dismiss="modal">Save</button>
+          <button type="button" id="edit-projects-cancel" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" id="edit-projects-submit" class="btn btn-primary">Save</button>
         </div>
       </div>
     </div>
@@ -585,13 +590,6 @@
 <!-- Mustache template - avoided by jinja -->
 {% raw %}
 <script id="template" type="x-tmpl-mustache">
-
-    <div class="date-box">
-        {{date}}
-        {{#enddate}}
-        - {{enddate}}
-        {{/enddate}}
-    </div> 
 
     <div class="row">
       <div class="col-md-8 notes-area">
@@ -683,21 +681,58 @@
 <script id="template-projects" type="x-tmpl-mustache">
   <div class="row">
     <div class="col-md-offset-2 col-md-8">
+      <div class="alert alert-warning alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span>
+        </button>
+        Please Save after Editing
+    </div>
+
       {{#pbox}}
-        <div class="edit-projects-display-div">
+        <div id="{{pid}}" class="edit-projects-display-div">
 
           <div class="edit-projects-title">
-            {{projectName}}
+            {{pname}}
+          </div>
+
+          
+          <div class="dropdown edit-projects-option-container">
+            <a class="dropdown-toggle edit-projects-option" data-toggle="dropdown">
+              <div class="glyphicon glyphicon-option-vertical"></div>
+            </a>
+
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li class="edit-projects-rename"><a>Rename Project</a></li>
+                <li class="edit-projects-change-desc"><a>Change Description</a></li>
+                <li class="divider"></li>
+                
+                {{#isprod}}
+                <li class="edit-projects-set-prod" data-prod=true><a><div class="glyphicon glyphicon-remove edit-projects-dropdown-icon"></div>Set as Unproductive </a></li>
+                {{/isprod}}
+
+                {{^isprod}}
+                <li class="edit-projects-set-prod" data-prod=false><a><div class="glyphicon glyphicon-ok edit-projects-dropdown-icon"></div>Set as Productive </a></li>
+                {{/isprod}}
+
+              </ul>
           </div>
 
           <div class="edit-projects-description">
-            {{projectDescription}}
+            {{pdesc}}
           </div> 
 
-          <a class="edit-projects-option">
-            <div class="glyphicon glyphicon-option-vertical"></div>
-          </a>  
+          <div class="edit-projects-binary">
+            {{#isprod}}
+              <div class="edit-projects-productive">
+                productive
+              </div>
+            {{/isprod}}
 
+            {{^isprod}}
+              <div class="edit-projects-productive unproductive">
+                Unproductive
+              </div>
+            {{/isprod}}
+          </div>
 
         </div>
       {{/pbox}}
