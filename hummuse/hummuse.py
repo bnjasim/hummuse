@@ -115,62 +115,6 @@ class Handler(webapp2.RequestHandler):
 		self.write(self.render_str(template, **html_add_ins))
 
 
-class AddProjectHandler(Handler):
-
-	def get(self):
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect(users.create_login_url('/welcome'))
-			
-		else:
-			logout_url = users.create_logout_url('/')
-			user_ent_key = ndb.Key(Account, user.user_id())	
-
-			#form_warning = self.request.get('warning')
-			#d_message = self.request.get('dmessage')
-			#pName = self.request.get('pname')
-			#pNotes = self.request.get('pnotes')
-			#logging.error(type(pname))
-			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
-			all_projects = list(p_cursor)
-			active_projects = [p for p in all_projects if p.projectActive is not False]
-			self.render("projects.html", 
-					     #pList = active_projects, 
-					     user_name = utils.shorten_name(user.nickname()), 
-					     logout_url = logout_url#,
-					     #form_warning = form_warning,
-					     #delete_message = d_message,
-					     #pName = pName,
-					     #pNotes = pNotes
-					     )
-	
-	def post(self):
-		
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect(users.create_login_url('/welcome'))
-			
-		else:
-			user = users.get_current_user()
-			user_ent_key = ndb.Key(Account, user.user_id())	
-			pName = self.request.get('pname')
-			logging.error(pName)
-			pDesc = self.request.get('pdesc')
-			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
-			all_projects = list(p_cursor)
-			all_projects_name = [p.projectName for p in all_projects]
-			if (pName):
-				if (pName not in all_projects_name):
-					pro = Projects(parent = user_ent_key, 
-								   projectName=pName, 
-								   projectDescription=pDesc)
-					pro.put()
-					self.redirect('/projects')
-				else:
-					self.redirect(format('/project?warning=The Project '+str(pName)+' already exists!&pname='+str(pName)+'&pnotes='+str(pNotes)))
-			else:
-				self.redirect(format('/project?warning=Project Title is too short&pnotes='+str(pNotes)))
-
 
 def make_projects_dict(p):
 	
@@ -279,9 +223,12 @@ def commit_entry_transaction(entry, projectObject):
 		projectObject.projectLastAccessed = datetime.datetime.now()
 		projectObject.projectLastHour = entry['hoursWorked']
 		projectObject.projectEntriesNo = projectObject.projectEntriesNo + 1
-		projectObject.put()
+		future1 = projectObject.put_async()
 
-	Entry(**entry).put()
+	future2 = Entry(**entry).put_async()
+
+	future1.get_result()
+	future2.get_result()
 
 
 # through Ajax POST request
@@ -362,106 +309,38 @@ class MakeEntryAjax(Handler):
 			self.response.out.write(json.dumps({'response': 0})) # 0 means success
 
 
-
-class MakeEntryHandler(Handler):
+# decrement projectEntriesNo
+@ndb.transactional
+def delete_entry_transaction(ekey, pkey):
 	
-	def get(self):
+	projectObject = pkey.get()
+	if projectObject:
+		projectObject.projectEntriesNo = projectObject.projectEntriesNo - 1
+		future1 = projectObject.put_async()
+
+	ekey.delete()
+	future1.get_result()
+
+
+class DeleteEntryAjax(Handler):
+	def post(self):	
 		user = users.get_current_user()
 		if user is None: 
 			self.redirect(users.create_login_url('/welcome'))
-
-		else:
-			logout_url = users.create_logout_url('/')
-			user_ent_key = ndb.Key(Account, user.user_id())	
-			
-			#form_warning = self.request.get('form_warning')
-			#message = self.request.get('message')
-			p_cursor = ndb.gql("SELECT * FROM Projects WHERE ANCESTOR IS :1", user_ent_key)
-			all_projects = list(p_cursor)
-			active_projects = [p for p in all_projects if p.projectActive is not False]
-
-			
-			self.render("data.html", 
-						 user_name = utils.shorten_name(user.nickname()), 
-					     logout_url = logout_url,
-					     projects = active_projects
-					    # form_warning = form_warning,
-					    # special_message = message
-					    )
-
-	def post(self):
-		user = users.get_current_user()
-		if user is None: 
-			self.redirect(users.create_login_url('/new_user'))
 			
 		else:
-			user_ent_key = ndb.Key(Account, user.user_id())	
-			entry = {}
-			# date - a string of the format "Wed Jun 24 2015" - 15 characters
-			date = self.request.get('date') 
-			t = datetime.date.today()
-			ndb_date = t.replace(day = int(date[8:10]),
-								 month = utils.months[ date[4:7] ],
-								 year = int(date[11:15])
-								 )
-			
-			# IsAchievement
-			if(self.request.get('achievement') == 'true'):
-				isAchievement = True
-			else:
-				isAchievement = False	
-			
-			# notes
-			notes = self.request.get('notes')
+			user_ent_key = ndb.Key(Account, user.user_id())
+			eid = self.request.get('eid')
+			pid = self.request.get('pid')
+			ekey = ndb.Key(Account, user.user_id(), Entry, int(eid))
+			pkey = ndb.Key(Account, user.user_id(), Projects, int(pid))
+			delete_entry_transaction(ekey, pkey)
+
+			self.response.out.write(json.dumps({'response': 'success'}))
+
+
 	
-			#tags
-			# convert space seperated string to list of strings
-			#logging.error(self.request.get('tags'))
-			tags = str(urllib.unquote(self.request.get('tags'))).split(',')
-			if len(tags) > 10:
-				tags = []
 
-			#logging.error(self.request.get('formkind'))
-			formkind = str( (self.request.get('formkind') ) ) 
-			if formkind == 'work':
-				# project id
-				project = int( self.request.get('project') )
-				#projectName = self.request.get('pname')
-				#isproductive = self.request.get('isprod') == 'true'
-				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
-				projectObject = projectKey.get()
-				projectName = projectObject.projectName;
-				isproductive = projectObject.projectProductive
-				# working time
-				h = self.request.get('hours', default_value=0)
-				m = self.request.get('minutes', default_value=0)
-				#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
-				hours = int(h) + int(m)/60.0
-
-				entry.update({'parent': user_ent_key,
-						 	'datakind': formkind,
-						 	'project': projectKey, 
-						 	'projectName': projectName,
-						 	'isWorkProductive': isproductive,
-						 	'notes': notes,
-						 	'date':  ndb_date,	
-						 	'hoursWorked': hours,
-						 	'isAchievement': isAchievement,
-						  	'tags': tags 
-						 	  })
-
-			else:
-				entry.update({'parent': user_ent_key,
-							'datakind': formkind,
-							'notes': notes,
-							'date': ndb_date,	
-							'isAchievement':  isAchievement,
-							'tags':  tags
-						  })	
-
-			
-			Entry(**entry).put()
-			self.redirect('/data')	
 
 
 # Registers new users in Account
@@ -511,7 +390,7 @@ def make_entry_dict(e):
 	if e.project:
 		pid = e.project.id()
 
-	return {'isWork': isWork, 'date': dateString, 'isachiev': e.isAchievement,
+	return {'eid':e.key.id() ,'isWork': isWork, 'date': dateString, 'isachiev': e.isAchievement,
 			'notes': e.notes, 'tags': e.tags, 'pid': pid, 'hrs': e.hoursWorked};
 		
 
@@ -859,11 +738,10 @@ class UpdateHandler(Handler):
 
 app = webapp2.WSGIApplication([
 	('/', HomeHandler),
-    ('/projects', AddProjectHandler),
     ('/addproject', AddProjectAjax),
     ('/editprojs', EditProjectsAjax),
     ('/makeentry', MakeEntryAjax),
-    ('/data', MakeEntryHandler),
+    ('/deleteentry', DeleteEntryAjax),
     ('/login', LoginHandler),
     ('/welcome', WelcomePageHandler),
     ('/ajaxhome', AjaxHomeHandler),

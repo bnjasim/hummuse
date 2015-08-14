@@ -26,18 +26,9 @@
 		  <ul class="nav navbar-nav navbar-right custom">
 		    <li class="active" id="home"><a href="/"><div>Home</div></a></li>
 		  
-		    <li>
-		      <a href="/data">
-		        <div class="add-data">	
-		          <div class="my-thumbnail-marker">
-		  		    <img src="static/images/mark.png" style="max-width:100%; max-height:100%;">
-		  		  </div>  
-		  	      <span>Data</span>	
-		  	    </div>
-		      </a>
-		    </li>
+		  
 
-		  <li><a><div>Plans</div></a></li>
+		  <li><a><div>Notifications</div></a></li>
 
 		  <li><a><div>Connect</div></a></li>
 
@@ -71,12 +62,14 @@
 <div class="col-md-2 col-md-push-10" id="right-panel"> 
 
   <div id="timer" class="well" data-toggle="tooltip" title="Work Tracker" data-placement="left">
+   
     <div class="timer-header">
-      <div id="left-caret-arrow" class="left-caret theme-color"></div>
+      <!--<div id="left-caret-arrow" class="left-caret theme-color"></div>
       <div class="truncated"></div>
-      <div id="right-caret-arrow" class="right-caret theme-color"></div>
+      <div id="right-caret-arrow" class="right-caret theme-color"></div>-->
+      <div class="truncated">Timer</div>
     </div>
-
+    
     <div class="timer-body">
       <span id="timer-time">--:--</span>     
     </div>
@@ -141,7 +134,7 @@
 
 
   <div class="panel-content"> 
-   <div class="panel-header">Make Notes
+   <div class="panel-header">Make Entry
    <!-- <div class="add-near-project" id="add-project-home"><a href="#">ADD</a></div> -->
    </div>
 
@@ -585,6 +578,28 @@
     </div>
   </div>
 
+<!-- Modal6 - Delete Entry Confirmation Modal -->
+  <div class="modal fade modal-center" id="delete-entry-modal" tabindex="-1" role="modal" aria-labelledby="delete-entry-modal-label" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times</button>
+          <h4 class="modal-title" id="delete-entry-modal-label">
+            <div class="glyphicon glyphicon-trash modal-icons"></div> 
+            Confirm You Want to Delete
+          </h4>
+        </div>
+        <div class="modal-body">
+          <p>The entry will permanently lost!</p>
+        </div>
+        <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" id="delete-entry-delete" class="btn btn-danger" data-dismiss="modal">Delete</button>
+        </div>
+      </div>
+    </div>   
+  </div>  
+
   
 
 <!-- Mustache template - avoided by jinja -->
@@ -595,30 +610,38 @@
       <div class="col-md-8 notes-area">
         <ul>
         {{#entries}}
-          <li class="entry-box">
-            <div class="bullet-raja-pencil"> 
+          <li id="{{eid}}" class="entry-box dropdown">
+           
+            <div class="bullet-raja-pencil dropdown-toggle" data-toggle="dropdown"> 
               {{#isWork}}            
                 <span class="glyphicon glyphicon-pencil"></span>
               {{/isWork}}  
               {{^isWork}}
                 <span class="glyphicon glyphicon-paperclip"></span>
               {{/isWork}}
-            </div>
+            </div>    
+
+            <ul class="dropdown-menu">
+              <li class="edit-entry"><a>Edit Entry</a></li>
+              <li class="delete-entry"><a>Delete Entry</a></li>
+            </ul>    
+           
             {{#isWork}}            
-                <div class="entry-box-title">{{proj}}</div>:
+                <div class="entry-box-title" data-pid={{pid}}>{{proj}}</div>:
             {{/isWork}}  
+
 
             {{^notes}}
               <i style="font-style:15px;">No notes</i>
             {{/notes}}  
 
             {{#isnbig}}  
-                <span class="short-note">{{{shortnotes}}}</span>
-                <span class="full-note">{{{notes}}}</span>
+                <span class="short-note note-area">{{{shortnotes}}}</span>
+                <span class="full-note note-area">{{{notes}}}</span>
             {{/isnbig}}  
 
             {{^isnbig}}  
-              {{{notes}}}
+              <span class="note-area"> {{{notes}}} </span>
             {{/isnbig}} 
 
             <div class="tags-box">
@@ -749,9 +772,9 @@
 <script src="static/js/bootstrap.js" type="text/javascript"></script>
 <script src="static/js/mustache.min.js" type="text/javascript"></script>
 <script src="static/js/my_js.js" type="text/javascript"></script>
-<!-- <script src="static/js/MathJax-master/MathJax.js?config=TEX-AMS_HTML" type="text/javascript"></script> -->
-<!-- change to this later to load from CDN - change JQuery as well-->
+<!-- <script src="static/js/MathJax-master/MathJax.js?config=TEX-AMS_HTML" type="text/javascript"></script> 
+<!-- change to this later to load from CDN - change JQuery as well
 <script src='https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML'></script>
-
+-->
 </body>
 </html>

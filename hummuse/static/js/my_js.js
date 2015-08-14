@@ -438,180 +438,11 @@ $(document).ready(function(){
   		return summary;
   	}
 
-  	// function to combine a week long data into a weekbox similar in structure to a daybox
-  	// called from reformat_data_to_weekly() function
-  	// a weekbox [{date:date, project:hummuse, notes:notes...}, {date:date, project:datascience,},{}..]
-/*  	var mashup_week_projects = function(temp_week){
-  		// temp_week is an array of dayboxes
-  		var weekentries = []; // to return
-  		var hashproj = {};
-
-  		// 1 pass to group entries by projects
-  		for (var i=0; i<temp_week.length; ++i){
-  			var d = temp_week[i]; // just one day in the week
-  			var dentries = d.entries; // an array with uique projects and events
-  			for (var j=0; j<dentries.length; ++j){
-  				var e = dentries[j];
-  				if (hashproj[e.proj])
-  					hashproj[e.proj] = hashproj[e.proj].concat(e);
-  				else if(e.proj)
-  					hashproj[e.proj] = [e];
-  				else if(hashproj['events'])
-  					hashproj['events'] = hashproj['events'].concat(e);
-  				else
-  					hashproj['events'] = [e];
-  			}
-  		}
-  		// 2nd pass over hashproj to create summary over projects
-		$.each(hashproj, function(key_proj, value_entries){
-			var work_or_event_mashed_entry = {},
-				totalh = 0,
-  				combinedNotes = '',
-  				shortnotes = '',
-  				combinedTags = [];
-  				combinedTagsLower = []; // just to compare
-
-			if(key_proj !== 'events'){
-
-  				var entry = {};
-
-  				for (var i=0; i<value_entries.length; ++i){
-
-  					entry = value_entries[i];
-  					totalh += entry['hrs'];
-  					
-					// combine tags & avoid repitions
-  					var tags = entry['tags'];
-  					
-  					// if tags = [""] then don't concat
-  					for(var j=0; j<tags.length; ++j) {
-  						var t = tags[j],
-  							t_lower = t.replace(/ /g, '').toLowerCase();
-  						// t_lower not present	
-  						if (t != "" && combinedTagsLower.indexOf(t_lower) === -1){
-  							combinedTags.push(t);	
-  							combinedTagsLower.push(t_lower);
-  						}
-  					}
-
-  					var notes = entry['notes'];
-  					shortnotes += findSummaryFromNotes(notes) + '<br/>';
-  					combinedNotes += '<br/>' + entry['date']+':' + notes;
-  				
-  				}
-
-  				shortnotes = shortnotes.slice(0,-5); // get ridoff last br
-  				shortnotes += '..<a class="show-more-notes">(more)</a>';
-
-  				work_or_event_mashed_entry['isWork'] = true;
-  				work_or_event_mashed_entry['notes'] = combinedNotes;
-  				work_or_event_mashed_entry['isnotebig'] = true;
-  				work_or_event_mashed_entry['shortnotes'] = shortnotes;
-  				work_or_event_mashed_entry['tags'] = combinedTags;
-  				work_or_event_mashed_entry['proj'] = key_proj;
-  				work_or_event_mashed_entry['hrs'] = totalh;
-  				work_or_event_mashed_entry['isproductive'] = entry['isproductive'];
-  			}
-
-  			else { // an event
-
-  				for (var i=0; i<value_entries.length; ++i){
-
-  					var entry = value_entries[i];
-
-  					// combine tags & avoid repitions
-  					var tags = entry['tags'];
-  					
-  					// if tags = [""] then don't concat
-  					for(var j=0; j<tags.length; ++j) {
-  						var t = tags[j],
-  							t_lower = t.replace(/ /g, '').toLowerCase();
-  						// t_lower not present	
-  						if (t != "" && combinedTagsLower.indexOf(t_lower) === -1){
-  							combinedTags.push(t);	
-  							combinedTagsLower.push(t_lower);
-  						}
-  					}
-
-					var notes = entry['notes'];
-  					shortnotes += findSummaryFromNotes(notes) + '<br/>';
-  					combinedNotes += entry['date']+':' + notes + '<br/>';
-  				}
-
-  				shortnotes += '..<a style="position:relative; left:80%;" class="show-more-notes">(more)</a>';
-
-  				work_or_event_mashed_entry['isWork'] = false;
-  				work_or_event_mashed_entry['notes'] = combinedNotes;
-  				work_or_event_mashed_entry['isnotebig'] = true;
-  				work_or_event_mashed_entry['shortnotes'] = shortnotes;
-  				work_or_event_mashed_entry['tags'] = combinedTags;
-
-  			}
-
-  			weekentries.push(work_or_event_mashed_entry);
-
-  		});
-		
-		return weekentries;
-
-  	}
 
   	// we want a week to start from Mon
 	Date.prototype.getMyDay  = function(){var a = this.getDay() - 1; if (a<0){a=6}; return a}
 
-  	var reforamt_data_to_weekly = function(data){
-  		// weekly_data should be an array of dayboxes
-  		var weekly_data = [];
-  		// a week is from Mon to Sun
-  		
-  		var temp_week = [data[0]],
-  			temp_date = new Date(data[0]['date']),
-  			week_start_date = new Date(data[0]['date']),
-  			week_end_date = new Date(data[0]['date']);
 
-  		week_start_date.setDate(week_start_date.getDate() - week_start_date.getMyDay());
-  	    week_end_date.setDate(week_end_date.getDate() + 6 - week_end_date.getMyDay());
-  	    
-  	    var weekbox = {};
-  	    weekbox['date'] = week_start_date.toDateString();
-  	    weekbox['enddate'] = week_end_date.toDateString();
-  	    
-  	    weekly_data.push(weekbox);
-
-  	    for (var i=1; i<data.length; ++i){
-  	    	temp_date = new Date(data[i]['date']);
-
-  	    	if (temp_date >= week_start_date)
-  	    		// in the same week - prepend - unshift
-  	    		temp_week.unshift(data[i]);
-
-  	    	else {
-  	    		// finish the previous weekbox
-  	    		weekbox['entries'] = mashup_week_projects(temp_week);
-
-  	    		temp_week = [data[i]];
-  	    		weekbox = {};
-
-  	    		week_start_date = new Date(data[i]['date']),
-  				week_end_date = new Date(data[i]['date']);
-  				week_start_date.setDate(week_start_date.getDate() - week_start_date.getMyDay());
-  	    		week_end_date.setDate(week_end_date.getDate() + 6 - week_end_date.getMyDay());
-
-  	    		weekbox['date'] = week_start_date.toDateString();
-  	    		weekbox['enddate'] = week_end_date.toDateString();
-  	    		
-  	    		weekly_data.push(weekbox);
-
-  	    	}
-  	    // finally add last one
-		weekbox['entries'] = mashup_week_projects(temp_week);
-  	    		
-  	    }
-  		
-  		return weekly_data;
-  	}
-
-*/
   	// common to search tag and daily,weekly display 
   	// computes hrs of work, short notes etc..
   	var entry_common_computations = function(entries){
@@ -802,19 +633,6 @@ $(document).ready(function(){
  				if (page_state === 'all')
  					offset = data_old.length;
 
- 				/*else if (summary_state === 'weekly'){
- 					// if in the same week, more complex
- 					if (in_the_same_week(date1, date2)){
- 						if (weeks_loaded > 0)
- 							offset = weeks_loaded - 1;
- 						// remove the last weekly-box
- 						$('.daily-box').last().remove();
- 					}
- 					else {
- 						offset = weeks_loaded;
- 					}
- 				} */
-
  			}	
 
  			else {
@@ -860,6 +678,7 @@ $(document).ready(function(){
 			dataType: 'json',
 			success: function(received_data){
 				append_data_and_render(received_data);
+				set_edit_entry_event_handlers();
 			},
 			error: function(e){
 				alert('Error' + e);
@@ -1034,7 +853,7 @@ $(document).ready(function(){
 				set_edit_projects_modal();
 
 				// in the timer header as well
-				$('#timer').find('.truncated').text(projs_dict[projs[0].projectId]['pname']);
+				//$('#timer').find('.truncated').text(projs_dict[projs[0].projectId]['pname']);
 
 				// in the edit-projects modal as well
 				//set_edit_projects_modal();
@@ -1599,48 +1418,6 @@ $(document).ready(function(){
  	
 
 
-// --------Home Page -----------------------//
-
-	
-	/*$('#summary-panel').find('li').on('click', 'a', function(){
-	  $('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-	  $('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-	  $(this).addClass('left-panel-link-highlight');	
-	});
-
-	$('#summary-weekly').on('click', function(){
-		if (summary_state !== 'weekly') {
-			summary_state = 'weekly';
-			if (jsdata['data']) { // don't do anything if first data has not arrived
-				mainContentDiv.empty();
-				mainContentDiv.append('<div class="empty-box"></div>');
-				render_content(0);
-			}
-		}
-	});
-	$('#summary-daily').on('click', function(){
-		if (summary_state !== 'daily'){
-			summary_state = 'daily';
-			if (jsdata['data']) {// don't do anything before first data has arrived
-				mainContentDiv.empty();
-				mainContentDiv.append('<div class="empty-box"></div>');
-				render_content(0);
-			}
-		}
-
-	}); */
-
-	
-
-	/* $('#star-panel').on('click', function(){	
-		$(this).toggleClass('left-panel-link-highlight');
-		$(this).find('div').toggleClass('glyphicon-star-empty');	
-		$(this).find('div').toggleClass('glyphicon-star');
-		
-	}); */
-
-	//var project_array = ['Hummuse', 'One Wolf and two goats befriend three cows','NLP','Data Science'];
-	
 
 	//----------- Code for data.html ---------------------//
 	//---------------------------------------------------//
@@ -1991,6 +1768,45 @@ $(document).ready(function(){
 	});  
 
   }); 
+
+	var set_edit_entry_event_handlers = function(){
+	 
+	  $('li.delete-entry').on('click', 'a', function(){
+	    var ebox = $(this).parent().parent().parent();
+	    var eid = ebox.attr('id');
+	    // show a confirmation modal
+	    $('#delete-entry-modal').modal({backdrop:'static', keyboard:false});
+	    $('#my-fixed-top').css('padding-right','17px');
+	    // listener for delete
+	    $('#delete-entry-delete').on('click', function(){
+	    	console.log('confirmed to Delete');
+	    	var pid = ebox.find('.entry-box-title').data('pid');
+	    	// Ajax POST request to delete
+	    	$.ajax({
+				url: '/deleteentry',
+				type: 'POST',
+				data: {'eid': eid, 'pid':pid},
+				dataType: 'json',
+				success: function(res){
+					if (res.response){
+						// Refresh the main content
+ 						jsdata = {};
+ 						//mainContentDiv.empty();
+ 						mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"><div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>');
+ 						make_ajax_call();						
+					}
+				},
+				error: function(e){
+					alert('Sorry! Deletion failed '+ e);
+				}
+			}); 
+	    });
+	    
+	  });
+
+	}  
+
+
   //------- End of Form submission in Data through javascript -------//
 
 
@@ -2098,7 +1914,7 @@ $(document).ready(function(){
 			$('#timer-time').text(formatTime('--', '--'));	
 		}
 	});
-	// Timer List of Projects Display
+	/* Timer List of Projects Display
 	$('#right-caret-arrow').on('click', function(){
 		p_index += 1;
 		p_index = (p_index >= projs.length)? 0 : p_index;
@@ -2110,7 +1926,8 @@ $(document).ready(function(){
 		p_index = (p_index < 0)? projs.length-1 : p_index;
 		$('#timer').find('.truncated').text(projs_dict[projs[p_index].projectId]['pname']);
 
-	});
+	}); 
+	*/
 //------------------------------------------------------------//
 //----------------END OF TIMER-------------------------------//
 

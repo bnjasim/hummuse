@@ -67,6 +67,7 @@ body.leave-fixed-space{
   margin-bottom: 15px;
   border-bottom: 1px solid #ddd;
   box-shadow: 0 3px 2px -2px rgba(200,200,200,0.2);
+
 }
 
 .navbar-brand {
@@ -79,16 +80,18 @@ body.leave-fixed-space{
 
 #timer{
   margin-top: 20px;
+  width: 130px;
+  padding: 10px 5px !important;
   font-family: Helvetica, Arial, Verdana, sans-serif;
 }
 .timer-body{
   text-align: center;
-  width: 92%;
+  width: 100%;
   font-size: 2em;
-  margin: 8px 0px;
+  margin: 6px 0px;
 }
 .timer-footer{
-  width: 92%;
+  width: 100%;
   position: relative;
   left: 0px;
 }
@@ -117,7 +120,7 @@ body.leave-fixed-space{
 @media (max-width: 991px) { /* for xtra-small and small devices */
   #timer{
     margin-top:15px;
-    width: 160px;
+    width: 120px;
   }
   #play-pause-timer{
     width:30px;
@@ -129,16 +132,18 @@ body.leave-fixed-space{
 }
 
 .timer-header{
-  font-size: 13px;
-  font-weight: bold;
-  color: #57d;
+  font-size: 12px;
+  font-weight: 500;
+  font-style: italic;
+  color: #555;
+  width: 100%;
   height: 20px;
-  max-width: 150px;
+ /* box-shadow:  0 1px 2px -1px rgba(200,200,200,0.7);*/
+
 }
 .truncated { 
   display: inline-block;
-  min-width: 80%; 
-  max-width: 80%; 
+  min-width: 100%; 
   overflow: hidden; 
   text-overflow: ellipsis; 
   white-space: nowrap; 
@@ -197,12 +202,6 @@ body.leave-fixed-space{
   font-weight: 600;
 }
 
-#star-panel{
-  font-size: 14px;
-}
-#star-panel:hover{
-  cursor: pointer;
-}
 
 .lef-panel-icons{
   font-size: 13px;
@@ -381,6 +380,16 @@ body.leave-fixed-space{
   padding-top: 5px;
 }
 
+
+.bullet-raja-pencil:hover{
+  cursor: pointer;
+}
+
+.entry-box .dropdown-menu{
+  background-color: #fbfbfb;
+  top: 40%;
+}
+
 .daily-box .entry-box-title{
   display: inline-block;
   color: #222;
@@ -394,13 +403,13 @@ body.leave-fixed-space{
   font-weight: 600; 
 }
 
-.entry-box ul{
+.entry-box .note-area ul{
   margin-left: 0px;
   padding-left: 20px;
   list-style-type: circle;
 }
 
-.entry-box ol{
+.entry-box .note-area ol{
   margin-left: 0px;
   padding-left: 23px;
 }
@@ -517,10 +526,6 @@ a.load-more-click:hove{
   position: absolute;
   top: 10%;
   margin: 0;
-}
-
-.well{
-  padding: 19px 10px !important;
 }
 
 
