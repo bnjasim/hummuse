@@ -537,7 +537,13 @@ $(document).ready(function(){
   				if(totalm > 0)
   					daybox['totalm'] = totalm;
   				// don't display 'Total' if
-  				if(entries.length>1 && (totalh>0 || totalm>0))
+  				var no_of_work = 0;
+  				for (var j=0; j<entries.length; ++j){
+  					var e = entries[j];
+  					if (e.isWork)
+  						no_of_work += 1;
+  				}
+  				if(no_of_work>1 && (totalh>0 || totalm>0))
   					daybox['totalpresent'] = true;
 
 
@@ -1193,6 +1199,7 @@ $(document).ready(function(){
 		// set the event listeners
 		// To rename a project - shouldn't allow more than 40 characters
 		$('.edit-projects-display-div').find('ul.dropdown-menu li.edit-projects-rename').on('click', 'a', function(){
+			console.log('edit project name');
 			var p = $(this).parent().parent().parent().parent();
 			var pid = p.attr('id');
 			if (edited_projects.indexOf(pid) < 0) 
@@ -1292,6 +1299,7 @@ $(document).ready(function(){
  			}
 
  			// ajax call to POST the edited projects
+ 			console.log('ajax post to edit projects');
  			$.ajax({
 
 				url: '/editprojs',
@@ -1351,7 +1359,8 @@ $(document).ready(function(){
 		s.find('div').addClass('glyphicon-star-empty');
 		$(this).find('div').removeClass('glyphicon-star');
 		s.data('value', false);
-		list_projects_work_form();
+		if (projs.length > 0)
+			list_projects_work_form();
 	});
 
    $('#add-work-cancel').click(function(){
@@ -1833,14 +1842,14 @@ $(document).ready(function(){
 
 	var set_edit_entry_event_handlers = function(){
 	 
-	  $('li.delete-entry').on('click', 'a', function(){
+	  $('li.delete-entry').off('click').on('click', 'a', function(){
 	    var ebox = $(this).parent().parent().parent();
 	    var eid = ebox.attr('id');
 	    // show a confirmation modal
 	    $('#delete-entry-modal').modal({backdrop:'static', keyboard:false});
 	    $('#my-fixed-top').css('padding-right','17px');
 	    // listener for delete
-	    $('#delete-entry-delete').on('click', function(){
+	    $('#delete-entry-delete').off('click').on('click', function(){
 	    	console.log('confirmed to Delete');
 	    	var pid = ebox.find('.entry-box-title').data('pid');
 	    	// Ajax POST request to delete
@@ -1867,7 +1876,7 @@ $(document).ready(function(){
 	  });
 
 	  // Edits common for Event and Work
-	$('li.edit-entry').on('click', 'a', function(){
+	$('li.edit-entry').off('click').on('click', 'a', function(){
 		
 	  	$('#edit-entry-modal').modal({backdrop:'static', keyboard:false});
 	  	$('#my-fixed-top').css('padding-right','17px');
@@ -1892,10 +1901,12 @@ $(document).ready(function(){
 	  	// clean up the tags added previously
 		var ts = $('#edit-entry-tag-section');
 		ts.empty();
-	  	var tag = tags[0].textContent.trim();
-	  	ts.data('tags', [tag]);
-	  	var t = '<div class="tags-added"><span>'+tag+'</span></div>';
-	  	ts.append(t);
+		if (tag.length>0){
+	  		var tag = tags[0].textContent.trim();
+	  		ts.data('tags', [tag]);
+	  		var t = '<div class="tags-added"><span>'+tag+'</span></div>';
+	  		ts.append(t);
+	  	}	
 	  	
 	  	for(var i=1; i<tags.length; ++i){
 	  		var tag = tags[i].textContent.trim();
@@ -1910,6 +1921,8 @@ $(document).ready(function(){
 	  });
 
 	}  
+
+	// outside of set_edit_entry_event handlers
     // For Edit Entry Submit
   	$('#edit-entry-submit').on('click', function(){
   		$(this).prop('disabled', true); // disable the button
@@ -1963,7 +1976,6 @@ $(document).ready(function(){
 	});  
 
   }); 
-
 
 
   //------- End of Form submission in Data through javascript -------//
@@ -2090,22 +2102,37 @@ $(document).ready(function(){
 //------------------------------------------------------------//
 //----------------END OF TIMER-------------------------------//
 //$('#add-project').tooltip('show');
+  //$('#json-div').tooltip('show');
   var welcome_new_users = function(){
-  	$('#add-project').tooltip('show');
+  	var work_shown = false;
+  	var add_proj = $('#add-project');
+  	add_proj.data('toggle', "tooltip");
+  	add_proj.attr('title', "Get Started By Adding A New Project Here!");
+  	add_proj.data('placement', "right");
+  	add_proj.tooltip('show');
 
-  	$('#add-project').hover(function(){
-  		$('#add-project').tooltip('destroy');
+  	// data-toggle="tooltip" title= data-placement="right" data-trigger="manual"
+
+  	add_proj.hover(function(){
+  		add_proj.tooltip('destroy');
   		
-  		$('#add-work').tooltip('show');
-
-  		$('#add-work').hover(function(){
-  			$('#add-work').tooltip('destroy');
-  		});
+  		if (!work_shown){
+  			var add_work = $('#add-work');
+  			add_work.data('toggle', "tooltip");
+  			add_work.attr('title', "Keep Making Notes Here Everyday!");
+  			add_work.data('placement', "right");
+  			add_work.tooltip('show');
+  			add_work.hover(function(){
+  				add_work.tooltip('destroy');
+  			});
+  			work_shown = true;
+  		}	
 
   	});
-
-  	
+  		
   }
+
+
 
 
 });

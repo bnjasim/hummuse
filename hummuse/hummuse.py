@@ -224,11 +224,11 @@ def commit_entry_transaction(entry, projectObject):
 		projectObject.projectLastHour = entry['hoursWorked']
 		projectObject.projectEntriesNo = projectObject.projectEntriesNo + 1
 		future1 = projectObject.put_async()
-
-	future2 = Entry(**entry).put_async()
-
-	future1.get_result()
-	future2.get_result()
+		future2 = Entry(**entry).put_async()
+		future1.get_result()
+		future2.get_result()
+	else:
+		Entry(**entry).put()	
 
 
 # through Ajax POST request
@@ -276,14 +276,15 @@ class MakeEntryAjax(Handler):
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
 				# check if the same project on the same day already exists!
 				conflict = Entry.query(ancestor = user_ent_key).filter(Entry.date==ndb_date, Entry.project==projectKey).fetch();	
-				if conflict is None:
+				logging.error('\n-----\n-------'+str(conflict)+'\n-----\n-----\n')
+
+				if len(conflict) == 0:
 					projectObject = projectKey.get()
 					projectName = projectObject.projectName;
 					#isproductive = projectObject.projectProductive
 					# working time
 					h = self.request.get('hours', default_value=0)
 					m = self.request.get('minutes', default_value=0)
-					#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
 					hours = int(h) + int(m)/60.0
 
 					entry.update({'parent': user_ent_key,
