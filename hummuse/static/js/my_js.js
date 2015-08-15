@@ -482,6 +482,8 @@ $(document).ready(function(){
 			else if (m > 0)
 				hour_string = m + 'm';
 
+			entry['h'] = h;
+			entry['m'] = m;
 			entry['hrs_string'] = hour_string;
 			entry['ishz'] = (h === 0 && m === 0); // only if both are zero
 
@@ -574,6 +576,8 @@ $(document).ready(function(){
 			else 
 				finished_load();
 
+			set_edit_entry_event_handlers();
+
 	
 	}
 
@@ -665,6 +669,7 @@ $(document).ready(function(){
  		}
 
  		render_content(offset);
+ 		
  	}
 
 
@@ -678,7 +683,6 @@ $(document).ready(function(){
 			dataType: 'json',
 			success: function(received_data){
 				append_data_and_render(received_data);
-				set_edit_entry_event_handlers();
 			},
 			error: function(e){
 				alert('Error' + e);
@@ -760,6 +764,8 @@ $(document).ready(function(){
 		}
 		else 
 			finished_load();
+
+		set_edit_entry_event_handlers();
 
 	}
 
@@ -926,9 +932,102 @@ $(document).ready(function(){
   		}
   	});
 
+  		// filter by projects
+	// on() works for dynamically added contents  but click() doesn't
+	// shouldn't be invoked for ...show all which doesn't have an li
+	$('#projects-panel').on('click', 'li a', function(){
+		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+		//$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
+		$(this).addClass('left-panel-link-highlight');	
+		var pid = $(this).data('pid');
+		var pname = $(this).text();
+		//alert(project+' '+pid);
+		if(!pid) { // or project === 'All'
+			if (jsdata['data']) {// don't do anything before first data has arrived
+				//mainContentDiv.empty();
+				mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
+				render_content(0);
+			}
+		}
+		else {
+			//mainContentDiv.empty();
+			//page_state = 'search';
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			//search_ajax_tag(pname);
+			filter_by_project_ajax(pid);
+		}
+
+		//return false; // prevent default propagation
+	});
+
+	$('#star-panel').on('click', 'a', function(){
+		if (!processing) {
+			//mainContentDiv.empty();
+			//page_state = 'search';
+			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
+			achievements_ajax();
+		}
+	});
 
 
-	//--------------Projects--------------------//
+	// It's very important that cursor is None for the first call
+	var filter_by_project_ajax = function(pid, cursor) {
+		
+		processing = true;
+		$.ajax({
+			url: '/filterproject',
+			type: 'POST',
+			data: {'pid':pid, 'cursor':cursor},
+			dataType: 'json',
+			success: function(search_results){
+				if (!cursor) {
+					// initially, empty the maincontent again to remove the loading-gif
+					// As well as to avoid any potential conflicts between two ajax requests
+					//mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
+				}	
+				results = search_results;
+				display_search_results(search_results, pid, 2); // option 2 
+				processing = false;
+			},
+			error: function(e){
+				alert('Server Error: Search Failed' + e);
+			}
+		}); 
+
+	}
+	
+	
+	// It's very important that cursor is None for the first call
+	// using search['cursor'] can be problematic
+	var achievements_ajax = function(cursor) {
+		
+		processing = true;
+		$.ajax({
+			url: '/achievementsajax',
+			type: 'POST',
+			data: {'cursor':cursor},
+			dataType: 'json',
+			success: function(search_results){
+				if (!cursor) {
+					// initially, empty the maincontent again to remove the loading-gif
+					// As well as to avoid any potential conflicts between two ajax requests
+					//mainContentDiv.empty();
+					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
+				}	
+				display_search_results(search_results, 'achievements', 1); // option 1 
+				processing = false;
+			},
+			error: function(e){
+				alert('Server Error: Search Failed' + e);
+			}
+		}); 
+
+	}
+
+
+//----------------Projects--------------------//
+
 	var alreadyExistingProject = function(p){
 		// check if p is present in projs
 		// convert p is already in lowercase no spaces
@@ -1236,19 +1335,21 @@ $(document).ready(function(){
 	});
 
 
-
-   //--------END of EDIT Projects ---------------//
-
  	//--------END of Projects---------------------//
 
 
-   //--------- Data Entry ----------------------------//
+
+//---------------- Data Entry ----------------------------//
 
    $('#add-work').on('click', function(){
  		$('#add-work-footer-div').empty(); // remove warnings from modal
 		$('#add-work-modal').modal({backdrop:'static', keyboard:false});
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
+		var s = $('#form-work-star');
+		s.find('div').addClass('glyphicon-star-empty');
+		$(this).find('div').removeClass('glyphicon-star');
+		s.data('value', false);
 		list_projects_work_form();
 	});
 
@@ -1261,6 +1362,7 @@ $(document).ready(function(){
 		//	$('#my-fixed-top').css('padding-right', '0px')}, 400);
 	});
 
+   
 	$('#add-work-close').click(function(){
 		$('#add-work-cancel').click();
 	});
@@ -1270,6 +1372,10 @@ $(document).ready(function(){
 		$('#add-event-modal').modal({backdrop:'static', keyboard:false});
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
+		var s = $('#form-event-star');
+		s.find('div').addClass('glyphicon-star-empty');
+		$(this).find('div').removeClass('glyphicon-star');
+		s.data('value', false);
 	});
 
    $('#add-event-cancel').click(function(){
@@ -1321,106 +1427,6 @@ $(document).ready(function(){
 
 		}
 	}
-
-	// filter by projects
-	// on() works for dynamically added contents  but click() doesn't
-	// shouldn't be invoked for ...show all which doesn't have an li
-	$('#projects-panel').on('click', 'li a', function(){
-		$('#projects-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-		//$('#summary-panel').find('.left-panel-link-highlight').removeClass('left-panel-link-highlight');//remove hightlight first
-		$(this).addClass('left-panel-link-highlight');	
-		var pid = $(this).data('pid');
-		var pname = $(this).text();
-		//alert(project+' '+pid);
-		if(!pid) { // or project === 'All'
-			if (jsdata['data']) {// don't do anything before first data has arrived
-				//mainContentDiv.empty();
-				mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
-				render_content(0);
-			}
-		}
-		else {
-			//mainContentDiv.empty();
-			//page_state = 'search';
-			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-			//search_ajax_tag(pname);
-			filter_by_project_ajax(pid);
-		}
-
-		//return false; // prevent default propagation
-	});
-
-	$('#star-panel').on('click', 'a', function(){
-		if (!processing) {
-			//mainContentDiv.empty();
-			//page_state = 'search';
-			mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"> <div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>')
-			achievements_ajax();
-		}
-	});
-
-
-	// It's very important that cursor is None for the first call
-	var filter_by_project_ajax = function(pid, cursor) {
-		
-		processing = true;
-		$.ajax({
-			url: '/filterproject',
-			type: 'POST',
-			data: {'pid':pid, 'cursor':cursor},
-			dataType: 'json',
-			success: function(search_results){
-				if (!cursor) {
-					// initially, empty the maincontent again to remove the loading-gif
-					// As well as to avoid any potential conflicts between two ajax requests
-					//mainContentDiv.empty();
-					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
-				}	
-				results = search_results;
-				display_search_results(search_results, pid, 2); // option 2 
-				processing = false;
-			},
-			error: function(e){
-				alert('Server Error: Search Failed' + e);
-			}
-		}); 
-
-	}
-	
-	
-	// It's very important that cursor is None for the first call
-	// using search['cursor'] can be problematic
-	var achievements_ajax = function(cursor) {
-		
-		processing = true;
-		$.ajax({
-			url: '/achievementsajax',
-			type: 'POST',
-			data: {'cursor':cursor},
-			dataType: 'json',
-			success: function(search_results){
-				if (!cursor) {
-					// initially, empty the maincontent again to remove the loading-gif
-					// As well as to avoid any potential conflicts between two ajax requests
-					//mainContentDiv.empty();
-					mainContentDiv.html('<div id="main-content-title"></div><div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
-				}	
-				display_search_results(search_results, 'achievements', 1); // option 1 
-				processing = false;
-			},
-			error: function(e){
-				alert('Server Error: Search Failed' + e);
-			}
-		}); 
-
-	}
-
- 	
-
-
-
-	//----------- Code for data.html ---------------------//
-	//---------------------------------------------------//
 
 
   	//-------- Fill the current date and previous 7 dates in data and event
@@ -1502,6 +1508,17 @@ $(document).ready(function(){
 		  else 
 		  	star.data('value', true);
 		});
+		// for changing star colour in edit entry
+		$('#form-edit-entry-star').on('click', function(){
+		  $(this).find('div').toggleClass('glyphicon-star-empty');
+		  $(this).find('div').toggleClass('glyphicon-star');
+		  var star = $('#form-edit-entry-star'); // jquery object
+		  if ( star.data('value') === true )
+		  	star.data('value', false); // star set to unselected
+		  else 
+		  	star.data('value', true);
+		});
+
 
 		// simulate button click by pressing Enter
 		$('#tag-input-text').keyup(function(event){
@@ -1512,6 +1529,11 @@ $(document).ready(function(){
 		$('#event-tag-input-text').keyup(function(event){
 			if(event.keyCode === 13)
 				$('#event-add-tag-button').click();
+		});
+
+		$('#edit-entry-tag-input-text').keyup(function(event){
+			if(event.keyCode === 13)
+				$('#edit-entry-add-tag-button').click();
 		});
 
 		// function to find whether a string is present in a list
@@ -1532,8 +1554,8 @@ $(document).ready(function(){
 		  $('#tag-input-text').val("");
 
 		  if(tag.trim().length > 0){
-		  	var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>',
-		  	    ts = $('#tag-section');
+		  	var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>';
+		  	var ts = $('#tag-section');
 		 
 		  	var tag_data = ts.data('tags'); // This is a list. Initially []
 		  	if (tag_data.length > 9) alert('Cannot add anymore tags!');
@@ -1542,7 +1564,7 @@ $(document).ready(function(){
 		  		if(findtag(tag_data, tag))
 		  			return false;
 		  		ts.append(t);
-		  		tag_data = tag_data.concat(tag);
+		  		tag_data.push(tag);
 		  		ts.data('tags', tag_data);
 		  	}
 		  }
@@ -1582,7 +1604,7 @@ $(document).ready(function(){
 		  		if(findtag(tag_data, tag))
 		  			return false;
 		  		ts.append(t);
-		  		tag_data = tag_data.concat(tag);
+		  		tag_data.push(tag);
 		  		ts.data('tags', tag_data);
 		  	}
 		  }
@@ -1603,8 +1625,46 @@ $(document).ready(function(){
 				
 		});
 		
-// Managing Bold, Italic etc. execCommand for textarea-div  //
-//---------------------------------------------------------//
+		// Add tag for edit entry
+		$('#edit-entry-add-tag-button').on('click', function(){
+		  var tag = $('#edit-entry-tag-input-text').val();
+		  $('#edit-entry-tag-input-text').val("");
+
+		  if(tag.trim().length > 0){
+		  	var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>',
+		  	    ts = $('#edit-entry-tag-section');
+		 
+		  	var tag_data = ts.data('tags'); // This is a list. Initially []
+		  	if (tag_data.length > 9) alert('Cannot add anymore tags!');
+		  	else {
+		  		// No repeated tags allowed!
+		  		if(findtag(tag_data, tag))
+		  			return false;
+		  		ts.append(t);
+		  		tag_data = tag_data.concat(tag);
+		  		ts.data('tags', tag_data);
+		  	}
+		  }
+		  return false; // To prevent page popping to the top
+		});
+
+		// remove tag from event
+		$('#edit-entry-tag-section').on('click', 'a.tag-remove', function(){
+			var tag = $(this).parent().find('span').text();
+			$(this).parent().remove(); // parent of .tag-remove is .tags-added
+			// remove it from the data-tags as well
+			var ts = $('#edit-entry-tag-section'),
+				data = ts.data('tags');
+
+			var pos = findtag(data, tag) - 1;
+			if (pos > 0)  // we will never remove 'event'
+				ts.data('tags', data.slice(0, pos).concat(data.slice(pos+1)));
+				
+		});
+
+
+	// Managing Bold, Italic etc. execCommand for textarea-div  //
+	//---------------------------------------------------------//
 	$('.textarea-icon-group').on('click', function(event){
 		var target = event.target,
 			tagName = target.tagName.toLowerCase();
@@ -1673,7 +1733,8 @@ $(document).ready(function(){
  			var fdiv = $('#add-work-footer-div').css('left', '10px');
 
  			if (res.response > 0) // already exists
- 				fdiv.html("<span class='glyphicon glyphicon-remove-circle'></span>Something Wrong!");//won't occur
+ 				// duplicate entry	
+				fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>You have already made an entry in "+ $('#project-form-button').text()+" on "+input3+"! Please Edit that");
  						
  			else { // success
  				// display success message at the footer and close the modal
@@ -1797,14 +1858,111 @@ $(document).ready(function(){
 					}
 				},
 				error: function(e){
-					alert('Sorry! Deletion failed '+ e);
+					console.log('Sorry! Deletion failed '+ e);
 				}
 			}); 
 	    });
 	    
 	  });
 
+	  // Edits common for Event and Work
+	$('li.edit-entry').on('click', 'a', function(){
+		
+	  	$('#edit-entry-modal').modal({backdrop:'static', keyboard:false});
+	  	$('#my-fixed-top').css('padding-right','17px');
+	  	// retrieve the old notes
+	  	var ebox = $(this).parent().parent().parent();
+	  	
+	  	// put the previous hours and minutes of work
+	  	if (ebox.data('iswork')){
+	  		$('#edit-entry-hours-form').removeClass('dont-display');
+	  		$('#edit-entry-working-hours').html(ebox.data('h') + '<span class="caret"></span>');
+	  		$('#edit-entry-working-minutes').html(ebox.data('m') + '<span class="caret"></span>');
+	  	}
+	  	else
+	  		$('#edit-entry-hours-form').addClass('dont-display');
+				  		
+
+	  	$('#edit-entry-modal').data('eid', ebox.attr('id'));
+	  	var note = ebox.find('.note-area').html();
+	  	$('#notes-form-edit-entry').html(note);
+	  	// set old tags
+	  	var tags = ebox.find('.tags-added');
+	  	// clean up the tags added previously
+		var ts = $('#edit-entry-tag-section');
+		ts.empty();
+	  	var tag = tags[0].textContent.trim();
+	  	ts.data('tags', [tag]);
+	  	var t = '<div class="tags-added"><span>'+tag+'</span></div>';
+	  	ts.append(t);
+	  	
+	  	for(var i=1; i<tags.length; ++i){
+	  		var tag = tags[i].textContent.trim();
+	  		var t = '<div class="tags-added"><span>'+tag+'</span><a class="tag-remove">&times</a></div>';
+		  	ts.append(t);
+		  	var tag_data = ts.data('tags');
+		  	tag_data.push(tag);
+		  	ts.data('tags', tag_data);
+		}
+		 		
+
+	  });
+
 	}  
+    // For Edit Entry Submit
+  	$('#edit-entry-submit').on('click', function(){
+  		$(this).prop('disabled', true); // disable the button
+  		$('#edit-entry-footer-div').css('left', '45%');
+ 		$('#edit-entry-footer-div').html('<img src="static/images/load-small.gif" alt="processing...">');
+ 		$('#edit-entry-cancel').prop('disabled', true);
+ 		$('#edit-entry-close').prop('disabled', true);
+
+  		// id of the entry being edited
+  		var eid = $('#edit-entry-modal').data('eid');
+  		// hours
+  		var input4 = $('#edit-entry-working-hours').text();
+		// minutes
+  		var input5 = $('#edit-entry-working-minutes').text();
+  		// Achievement Star
+  		var input6 = $('#form-edit-entry-star').data('value');
+  		// Notes textarea-div
+  		var input7 = $('#notes-form-edit-entry').html();
+  		// Tags
+  		var input8 = $('#edit-entry-tag-section').data('tags');
+  		
+  		var data = {'eid':eid, 'hours':input4, 'minutes':input5, 'achievement':input6, 'notes':input7, 'tags':JSON.stringify(input8) };
+		
+		$.ajax({
+
+		url: '/editentry',
+		type: 'POST',
+		dataType: 'json',
+		data: data,
+		success: function(res){
+			$('#edit-entry-submit').prop('disabled', false);
+ 			$('#edit-entry-cancel').prop('disabled', false);
+ 			$('#edit-entry-close').prop('disabled', false);
+ 			var fdiv = $('#edit-entry-footer-div').css('left', '10px');
+
+ 				// display success message at the footer and close the modal
+ 				fdiv.html("<span class='glyphicon glyphicon-ok-circle'></span>Edited Successfully").find('span').css('color','green');
+ 				setTimeout(function(){ $('#edit-entry-modal').modal('hide'); }, 1200);
+ 				
+ 				// Refresh the main content
+ 				jsdata = {};
+ 				//mainContentDiv.empty();
+ 				mainContentDiv.html('<div class="empty-box"></div><div class="initial-loading-container"><div class="initial-loading-gif"><img src="static/images/load-big.gif" alt="loading..." width="100%" height="100%"></div></div>');
+ 				make_ajax_call();
+ 			
+		},
+
+		error: function(e){
+			$('#edit-entry-footer-div').css('left', '10px').html("<span class='glyphicon glyphicon-remove-circle'></span>Server Error! Couldn't Edit");						
+					}
+	});  
+
+  }); 
+
 
 
   //------- End of Form submission in Data through javascript -------//

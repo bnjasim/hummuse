@@ -387,7 +387,7 @@ body.leave-fixed-space{
 
 .entry-box .dropdown-menu{
   background-color: #fbfbfb;
-  top: 40%;
+  top: 30px;
 }
 
 .daily-box .entry-box-title{
@@ -843,4 +843,8 @@ label{
 
 .dropdown-menu li a {
   margin-left: 5px;
+}
+
+.dont-display{
+  display: none;
 }

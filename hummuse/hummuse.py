@@ -264,7 +264,7 @@ class MakeEntryAjax(Handler):
 			if len(tags) > 10:
 				tags = []
 
-
+			response = 0
 			projectObject = None # remains None for event	
 			#logging.error(self.request.get('formkind'))
 			formkind = str( (self.request.get('formkind') ) ) 
@@ -274,16 +274,19 @@ class MakeEntryAjax(Handler):
 				#projectName = self.request.get('pname')
 				#isproductive = self.request.get('isprod') == 'true'
 				projectKey = ndb.Key(Account, user.user_id(), Projects, project)
-				projectObject = projectKey.get()
-				projectName = projectObject.projectName;
-				#isproductive = projectObject.projectProductive
-				# working time
-				h = self.request.get('hours', default_value=0)
-				m = self.request.get('minutes', default_value=0)
-				#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
-				hours = int(h) + int(m)/60.0
+				# check if the same project on the same day already exists!
+				conflict = Entry.query(ancestor = user_ent_key).filter(Entry.date==ndb_date, Entry.project==projectKey).fetch();	
+				if conflict is None:
+					projectObject = projectKey.get()
+					projectName = projectObject.projectName;
+					#isproductive = projectObject.projectProductive
+					# working time
+					h = self.request.get('hours', default_value=0)
+					m = self.request.get('minutes', default_value=0)
+					#logging.error('\n-----\n-------'+str(h)+" hours & "+str(m)+" mins"+'\n-----\n-----\n')
+					hours = int(h) + int(m)/60.0
 
-				entry.update({'parent': user_ent_key,
+					entry.update({'parent': user_ent_key,
 						 	'datakind': formkind,
 						 	'project': projectKey, 
 						 	'projectName': projectName,
@@ -293,6 +296,8 @@ class MakeEntryAjax(Handler):
 						 	'isAchievement': isAchievement,
 						  	'tags': tags 
 						 	  })
+				else:
+					response = 1
 
 			else:
 				entry.update({'parent': user_ent_key,
@@ -304,9 +309,49 @@ class MakeEntryAjax(Handler):
 						  })	
 
 			# call the transaction to change project last accessed and put entry
-			commit_entry_transaction(entry, projectObject)
+			if not response:
+				commit_entry_transaction(entry, projectObject)
 			
-			self.response.out.write(json.dumps({'response': 0})) # 0 means success
+			self.response.out.write(json.dumps({'response': response})) # 0 means success
+
+
+class EditEntryAjax(Handler):
+
+	def post(self):	
+		user = users.get_current_user()
+		if user is None: 
+			self.redirect(users.create_login_url('/welcome'))
+			
+		else:
+			user_ent_key = ndb.Key(Account, user.user_id())
+			eid = self.request.get('eid')
+			ekey = ndb.Key(Account, user.user_id(), Entry, int(eid))
+			# IsAchievement
+			isAchievement = True if(self.request.get('achievement') == 'true') else False
+			# notes
+			notes = self.request.get('notes')
+			#tags = str(urllib.unquote(self.request.get('tags'))).split(',')
+			tags = json.loads(self.request.get('tags'))
+			
+			if len(tags) > 10:
+				tags = []
+
+			# working time
+			h = self.request.get('hours', default_value=0)
+			m = self.request.get('minutes', default_value=0)
+			hours = int(h) + int(m)/60.0
+			
+			entry = ekey.get()
+			#logging.error('\n---------\n'+str(isAchievement)+'--------\n-------------\n---------')
+			entry.notes = notes
+			entry.hoursWorked = hours
+			entry.isAchievement = isAchievement
+			entry.tags = tags 
+			
+			entry.put()		
+			self.response.out.write(json.dumps({'response': 'success'}))	
+				
+				
 
 
 # decrement projectEntriesNo
@@ -315,7 +360,7 @@ def delete_entry_transaction(ekey, pkey):
 	
 	projectObject = pkey.get()
 	if projectObject:
-		projectObject.projectEntriesNo = projectObject.projectEntriesNo - 1
+		projectObject.projectEntriesNo = 0 if projectObject.projectEntriesNo-1 < 0 else projectObject.projectEntriesNo-1
 		future1 = projectObject.put_async()
 
 	ekey.delete()
@@ -331,10 +376,14 @@ class DeleteEntryAjax(Handler):
 		else:
 			user_ent_key = ndb.Key(Account, user.user_id())
 			eid = self.request.get('eid')
-			pid = self.request.get('pid')
 			ekey = ndb.Key(Account, user.user_id(), Entry, int(eid))
-			pkey = ndb.Key(Account, user.user_id(), Projects, int(pid))
-			delete_entry_transaction(ekey, pkey)
+			
+			pid = self.request.get('pid')
+			if pid:
+				pkey = ndb.Key(Account, user.user_id(), Projects, int(pid))
+				delete_entry_transaction(ekey, pkey)
+			else:
+				ekey.delete()	
 
 			self.response.out.write(json.dumps({'response': 'success'}))
 
@@ -741,6 +790,7 @@ app = webapp2.WSGIApplication([
     ('/addproject', AddProjectAjax),
     ('/editprojs', EditProjectsAjax),
     ('/makeentry', MakeEntryAjax),
+    ('/editentry', EditEntryAjax),
     ('/deleteentry', DeleteEntryAjax),
     ('/login', LoginHandler),
     ('/welcome', WelcomePageHandler),
