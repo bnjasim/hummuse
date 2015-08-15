@@ -841,28 +841,29 @@ $(document).ready(function(){
 				// show the projects in the left panel
 				list_projects_panel();
 
-				// if jsdata is set but not yet rendered, render now
-				// not yet rendered because ajax_projects was delayed
-				if (!rendered && jsdata['data']) {
-					//$('.initial-loading-container').remove();
- 					mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
- 					rendered = true; // not important to set
- 					render_content(0);
- 					//console.log('Projects arrived last');
+				// Tips for new users
+				if (projs.length == 0){
+					welcome_new_users();
 				}
+				else{
+					// if jsdata is set but not yet rendered, render now
+					// not yet rendered because ajax_projects was delayed
+					if (!rendered && jsdata['data']) {
+						//$('.initial-loading-container').remove();
+ 						mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
+ 						rendered = true; // not important to set
+	 					render_content(0);
+ 						//console.log('Projects arrived last');
+					}
 
+					// Also show in the work modal form Why?
+					// Because we may click on the add work modal before data arrives
+					// in that case projects will be filled as soon as it arrives
+					list_projects_work_form();
+					set_edit_projects_modal();
 
-				// Also show in the work modal form Why?
-				// Because we may click on the add work modal before data arrives
-				// in that case projects will be filled as soon as it arrives
-				list_projects_work_form();
-				set_edit_projects_modal();
-
-				// in the timer header as well
-				//$('#timer').find('.truncated').text(projs_dict[projs[0].projectId]['pname']);
-
-				// in the edit-projects modal as well
-				//set_edit_projects_modal();
+				}	
+					
 
 			},
 			error: function(e){
@@ -2088,6 +2089,23 @@ $(document).ready(function(){
 	*/
 //------------------------------------------------------------//
 //----------------END OF TIMER-------------------------------//
+//$('#add-project').tooltip('show');
+  var welcome_new_users = function(){
+  	$('#add-project').tooltip('show');
+
+  	$('#add-project').hover(function(){
+  		$('#add-project').tooltip('destroy');
+  		
+  		$('#add-work').tooltip('show');
+
+  		$('#add-work').hover(function(){
+  			$('#add-work').tooltip('destroy');
+  		});
+
+  	});
+
+  	
+  }
 
 
 });

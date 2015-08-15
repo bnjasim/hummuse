@@ -848,3 +848,7 @@ label{
 .dont-display{
   display: none;
 }
+
+.tooltip-inner{
+  min-width: 120px;
+}
