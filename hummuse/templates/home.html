@@ -124,11 +124,11 @@
   </div>
 
 -->  
-  <div id="star-panel" class="left-panel panel-content">
+  <div id="star-panel" class="left-panel panel-content" title="favorite">
     <!--<span class="glyphicon glyphicon-star-empty theme-color"></span> -->
     <a>
       <div class="glyphicon glyphicon-star lef-panel-icons"></div> 
-      Achievements
+      Favorites
     </a>
   </div>
 
@@ -205,9 +205,9 @@
           </h4>
         </div>
         <div class="modal-body">
-          <form id="add-project-form"  class="form-horizontal my-form-styles" role="form">  
+          <form id="add-project-form"  class="form-horizontal" role="form">  
             <!-- Project Name -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="add-project-input">
                 <div class="data-highlight">
                   Name <span class="required"></span> 
@@ -219,7 +219,7 @@
             </div>    
     
             <!-- Project Description -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="project-description">
                 <div class="data-highlight">Description</div>
               </label>
@@ -285,17 +285,17 @@
               Work
             </div>
 
-            <div id="form-work-star" class="my-big-star-form theme-color" data-value="false">
+            <div id="form-work-star" class="my-big-star-form theme-color" data-value="false" title="favorite">
               <div class="glyphicon glyphicon-star-empty"></div>
             </div>
             
           </div>
         </div>
         <div class="modal-body">
-         <form id="add-work-form" class="form-horizontal my-form-styles" role="form">  
+         <form id="add-work-form" class="form-horizontal" role="form">  
 
           <!-- Pick Date dropdown button -->
-          <div class="form-group my-form-group">
+          <div class="form-group">
             
             <label class="control-label col-md-2" for="date-form-button">
               <div class="data-highlight">Date</div>
@@ -314,7 +314,7 @@
           </div>
 
           <!-- Choose Activity Dropdown box -->
-          <div class="form-group my-form-group">
+          <div class="form-group">
 
             <label class="control-label col-md-2" for="work-form-button">
               <div class="data-highlight">Project</div>
@@ -334,7 +334,7 @@
           </div>
     
           <!-- Hours and minutes -->
-          <div class="form-group my-form-group">
+          <div class="form-group">
 
             <label class="control-label col-md-2" for="working-time" style="padding-top:16px;">
               <div class="data-highlight">Working<br/>Time</div>
@@ -384,7 +384,7 @@
          
 
           <!-- Form Notes -->
-          <div class="form-group my-form-group">
+          <div class="form-group">
             <label class="control-label col-md-2" for="notes-form">
               <div class="data-highlight">Notes</div>
             </label>
@@ -415,7 +415,7 @@
           </div>
 
           <!-- Form Notes -->
-          <div class="form-group my-form-group">
+          <div class="form-group">
             <label class="control-label col-md-2" for="tag-input-text">
               <div class="data-highlight">Tags</div>
             </label>
@@ -464,7 +464,7 @@
               Event
             </div>
 
-            <div id="form-event-star" class="my-big-star-form theme-color" data-value="false">
+            <div id="form-event-star" class="my-big-star-form theme-color" data-value="false" title="favorite">
               <div class="glyphicon glyphicon-star-empty"></div>
             </div>
 
@@ -472,9 +472,9 @@
         </div>
 
         <div class="modal-body">
-          <form method="post" id="form-event" class="form-horizontal my-form-styles" role="form">  
+          <form method="post" id="form-event" class="form-horizontal" role="form">  
             <!-- Pick Date dropdown button -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="date-form-button-event">
                 <div class="data-highlight">Date</div>
               </label>
@@ -492,7 +492,7 @@
             </div>
 
             <!-- Textarea-div -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="notes-form-event">
                 <div class="data-highlight">Notes</div>
               </label>
@@ -522,7 +522,7 @@
             </div>
 
             <!-- Tags -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="event-tag-input-text">
                 <div class="data-highlight">Tags</div>
               </label>
@@ -619,7 +619,7 @@
               Edit
             </div>
 
-            <div id="form-edit-entry-star" class="my-big-star-form theme-color" data-value="false">
+            <div id="form-edit-entry-star" class="my-big-star-form theme-color" data-value="false" title="favorite">
               <div class="glyphicon glyphicon-star-empty"></div>
             </div>
 
@@ -627,10 +627,10 @@
         </div>
 
         <div class="modal-body">
-          <form method="post" id="form-edit-entry" class="form-horizontal my-form-styles" role="form">  
+          <form method="post" id="form-edit-entry" class="form-horizontal" role="form">  
 
           <!-- Hours and minutes -->
-          <div class="form-group my-form-group" id="edit-entry-hours-form">
+          <div class="form-group" id="edit-entry-hours-form">
 
             <label class="control-label col-md-2" for="edit-entry-working-time" style="padding-top:16px;">
               <div class="data-highlight">Working<br/>Time</div>
@@ -679,7 +679,7 @@
           </div>
 
             <!-- Textarea-div -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="notes-form-edit-entry">
                 <div class="data-highlight">Notes</div>
               </label>
@@ -709,7 +709,7 @@
             </div>
 
             <!-- Tags -->
-            <div class="form-group my-form-group">
+            <div class="form-group">
               <label class="control-label col-md-2" for="edit-entry-tag-input-text">
                 <div class="data-highlight">Tags</div>
               </label>

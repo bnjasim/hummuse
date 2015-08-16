@@ -529,10 +529,6 @@ a.load-more-click:hove{
 }
 
 
-/* Styling for the data.html */
-.my-form-styles{
-  font-family: Helvetica, Arial, Verdana, sans-serif;
-}
 
 .select-button{
   width: 100% !important;
@@ -579,9 +575,7 @@ a.load-more-click:hove{
   margin-top: -10px;
 }
 
-.my-form-group{
-  padding-top: 7px !important;
-}
+
 #working-time{
   margin-top: 4px;
 }
@@ -622,8 +616,8 @@ label{
 }
 .tags-added{
   display: inline-block;
-  margin-right: 7px;
-  padding: 5px;
+  margin-right: 10px;
+  padding: 5px 0px;
   background-color: #E6FFF6;
 }
 

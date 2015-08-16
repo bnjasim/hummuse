@@ -1356,8 +1356,8 @@ $(document).ready(function(){
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
 		var s = $('#form-work-star');
+		s.find('div').removeClass('glyphicon-star');
 		s.find('div').addClass('glyphicon-star-empty');
-		$(this).find('div').removeClass('glyphicon-star');
 		s.data('value', false);
 		if (projs.length > 0)
 			list_projects_work_form();
@@ -1383,8 +1383,8 @@ $(document).ready(function(){
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
 		var s = $('#form-event-star');
+		s.find('div').removeClass('glyphicon-star');
 		s.find('div').addClass('glyphicon-star-empty');
-		$(this).find('div').removeClass('glyphicon-star');
 		s.data('value', false);
 	});
 
@@ -1723,7 +1723,7 @@ $(document).ready(function(){
   	// Achievement Star
   	var input6 = $('#form-work-star').data('value');
 	// Notes textarea-div
-  	var input7 = $('#notes-form').html();
+  	var input7 = $('#notes-form').removeTrailingDivs().html();
   	// Tags
   	var input8 = $('#tag-section').data('tags'); // an array
   
@@ -1788,7 +1788,7 @@ $(document).ready(function(){
   	// Achievement Star
   	var input6 = $('#form-event-star').data('value');
   	// Notes textarea-div
-  	var input7 = $('#notes-form-event').html();
+  	var input7 = $('#notes-form-event').removeTrailingDivs().html();
   	// Tags
   	var input8 = $('#event-tag-section').data('tags');
   	/*
@@ -1901,7 +1901,7 @@ $(document).ready(function(){
 	  	// clean up the tags added previously
 		var ts = $('#edit-entry-tag-section');
 		ts.empty();
-		if (tag.length>0){
+		if (tags.length>0){
 	  		var tag = tags[0].textContent.trim();
 	  		ts.data('tags', [tag]);
 	  		var t = '<div class="tags-added"><span>'+tag+'</span></div>';
@@ -1940,7 +1940,7 @@ $(document).ready(function(){
   		// Achievement Star
   		var input6 = $('#form-edit-entry-star').data('value');
   		// Notes textarea-div
-  		var input7 = $('#notes-form-edit-entry').html();
+  		var input7 = $('#notes-form-edit-entry').removeTrailingDivs().html();
   		// Tags
   		var input8 = $('#edit-entry-tag-section').data('tags');
   		
@@ -2132,8 +2132,38 @@ $(document).ready(function(){
   		
   }
 
+  
+  var removeRecursively = function(node){
+  	var childnodes = node.children();
+  	// if no childnode, then its a leaf node with text <div>some text</div>
+  	if (childnodes.length === 0)
+  		return;
 
+  	for (var i=childnodes.length-1; i>=0; --i){
+  		var childnode = $(childnodes[i]);
+  		if (childnode.text().trim().length === 0)
+  			childnode.remove();
+  		else {
+  			removeRecursively(childnode);
+  			return;
+  		}
+  	}
+  }
 
+  // JQuery plugin to remove trailing spaces and <div>s from html content
+  // it should be called like $('#element').removeTrailingDivs
+  $.fn.removeTrailingDivs = function(){
 
+  	var node = $(this);
+  	// if no text inside notes-area
+  	if (node.text().trim().length === 0)
+  		node.html("");
+  	else
+  		removeRecursively(node);
+
+  	return node;
+  }	
+
+  	
 });
      
