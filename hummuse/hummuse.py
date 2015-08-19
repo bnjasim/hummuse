@@ -93,11 +93,11 @@ class Entry(ndb.Model):
 	def _normalize_tags(self):
 		tags = self.tags
 		first_level = [t.lower().replace(' ', '') for t in tags] # hajj house as hajjhouse
-		second_level = [] # 'hajj house' as 'hajj' and 'house'
-		for tag in tags:
-			second_level += [t.lower() for t in tag.split(' ') if t]
+		#second_level = [] # 'hajj house' as 'hajj' and 'house'
+		#for tag in tags:
+		#	second_level += [t.lower() for t in tag.split(' ') if t]
 
-		return first_level + second_level
+		return first_level# + second_level
 
 
 class Tags(ndb.Model):

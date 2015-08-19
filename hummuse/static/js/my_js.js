@@ -1322,11 +1322,13 @@ $(document).ready(function(){
  							var e = edprojs[i];
  							projs_dict[parseInt(e.pid, 10)] = {'pname':e.pname, 'pdesc':e.pdesc, 'isprod':e.isprod, 'pactive':true, 'pshared':false, 'plasthour':0, 'pentriesno':0};
  						}
+ 						// update the side pane projects list
+ 						list_projects_panel();
 
  						// refresh the main content div
  						mainContentDiv.html('<div class="col-md-8 date-box"></div><div class="clearfix"></div><div class="empty-box"></div>');
-						render_content(0);		
- 						
+						render_content(0);
+
  					}	
  				},
 
@@ -1353,6 +1355,7 @@ $(document).ready(function(){
    $('#add-work').on('click', function(){
  		$('#add-work-footer-div').empty(); // remove warnings from modal
 		$('#add-work-modal').modal({backdrop:'static', keyboard:false});
+		setDateInModal();
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
 		var s = $('#form-work-star');
@@ -1380,6 +1383,7 @@ $(document).ready(function(){
 	$('#add-event').on('click', function(){
  		$('#add-event-footer-div').empty(); // remove warnings from modal
 		$('#add-event-modal').modal({backdrop:'static', keyboard:false});
+		setDateInModal();
 		// whenever modal is opened add 17px padding-right to my-fixed-top to prevent it jumping
 		$('#my-fixed-top').css('padding-right', '17px');
 		var s = $('#form-event-star');
@@ -1440,29 +1444,31 @@ $(document).ready(function(){
 
 
   	//-------- Fill the current date and previous 7 dates in data and event
-  	//as soon as page is loaded	---------------//
-  	var date = new Date(); // today
-  	var data_form_dropdown_menu = $('#date-form-button').siblings('.select-dropdown-menu')[0],
-  		event_form_dropdown_menu = $('#date-form-button-event').siblings('.select-dropdown-menu')[0];
-  	// Execute the code only for data.html not for project.html etc.
-  	if(data_form_dropdown_menu) {
-    	$('#date-form-button').html(date.toDateString() + ' - Today'+'<span class="caret">');
-    	$('#date-form-button-event').html(date.toDateString() + ' - Today'+'<span class="caret">');
+  	// Do it everytime modal is opened - important otherwise it may show last day---------------//
+  	var setDateInModal = function(){
+  		var date = new Date(); // today
+  		var data_form_dropdown_menu = $('#date-form-button').siblings('.select-dropdown-menu')[0],
+  			event_form_dropdown_menu = $('#date-form-button-event').siblings('.select-dropdown-menu')[0];
+  		// Execute the code only for data.html not for project.html etc.
+  		if(data_form_dropdown_menu) {
+    		$('#date-form-button').html(date.toDateString() + ' - Today'+'<span class="caret">');
+    		$('#date-form-button-event').html(date.toDateString() + ' - Today'+'<span class="caret">');
 
-    	for(var j=0; j<38; ++j){
-  	  		var temp_li = document.createElement("li");
-  	  		var temp_a = document.createElement("a");
-  	  		temp_a.textContent = date.toDateString(); // Wed Jun 24 2015 format
-  	  		if(j===0)
- 	 			temp_a.textContent += ' - Today';
+    		for(var j=0; j<38; ++j){
+  	  			var temp_li = document.createElement("li");
+  	  			var temp_a = document.createElement("a");
+  	  			temp_a.textContent = date.toDateString(); // Wed Jun 24 2015 format
+	  	  		if(j===0)
+ 		 			temp_a.textContent += ' - Today';
 
-  	  		date.setDate(date.getDate()-1); // find previous date
+	  	  		date.setDate(date.getDate()-1); // find previous date
 
-  	  		temp_li.appendChild(temp_a);
-  	  		data_form_dropdown_menu.appendChild(temp_li);
-  	  		event_form_dropdown_menu.appendChild(temp_li.cloneNode(true)); // deep copy
-    	}
-  	}
+	  	  		temp_li.appendChild(temp_a);
+  		  		data_form_dropdown_menu.appendChild(temp_li);
+  	  			event_form_dropdown_menu.appendChild(temp_li.cloneNode(true)); // deep copy
+    		}
+  		}
+  	}	
 
 
     // for changing text in dropdown button
@@ -1840,6 +1846,8 @@ $(document).ready(function(){
 
   }); 
 
+
+	// edit or delete dropdown button click event handlers
 	var set_edit_entry_event_handlers = function(){
 	 
 	  $('li.delete-entry').off('click').on('click', 'a', function(){
@@ -1891,10 +1899,17 @@ $(document).ready(function(){
 	  	}
 	  	else
 	  		$('#edit-entry-hours-form').addClass('dont-display');
-				  		
-
+		
 	  	$('#edit-entry-modal').data('eid', ebox.attr('id'));
-	  	var note = ebox.find('.note-area').html();
+
+	  	var note = '';
+	  	if (ebox.find('.full-note').length > 0)
+			note = ebox.find('.full-note').html();
+		else
+			note = ebox.find('.note-area').html();
+
+		//console.log(ebox.find('.note-area').html());
+	  	
 	  	$('#notes-form-edit-entry').html(note);
 	  	// set old tags
 	  	var tags = ebox.find('.tags-added');

@@ -403,6 +403,10 @@ body.leave-fixed-space{
   font-weight: 600; 
 }
 
+.entry-box .note-area{
+  display: inline-block;
+}
+
 .entry-box .note-area ul{
   margin-left: 0px;
   padding-left: 20px;
@@ -733,7 +737,7 @@ label{
   }
 
   .modal-my-event{
-    width: 780px;
+    width: 730px;
     margin-top: 1%;
   }
 }

@@ -28,8 +28,7 @@
 		  
 		  
 
-		  <li><a><div>Notifications</div></a></li>
-
+		  <li><a><div>Notifications </div></a></li>
 		  <li><a><div>Connect</div></a></li>
 
 		  <li class="dropdown">
@@ -273,7 +272,7 @@
 
  <!-- Modal3 - Make Entry/Add Work modal -->
   <div class="modal fade" id="add-work-modal" tabindex="-1" role="modal" aria-labelledby="add-work-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-my-work">
+    <div class="modal-dialog modal-my-event">
       <div class="modal-content">
         <div class="modal-header">
           <!-- This is floated to the right -->
@@ -786,12 +785,12 @@
             {{/notes}}  
 
             {{#isnbig}}  
-                <span class="short-note note-area">{{{shortnotes}}}</span>
-                <span class="full-note note-area">{{{notes}}}</span>
+                <div class="short-note note-area">{{{shortnotes}}}</div>
+                <div class="full-note note-area">{{{notes}}}</div>
             {{/isnbig}}  
 
             {{^isnbig}}  
-              <span class="note-area"> {{{notes}}} </span>
+              <div class="note-area"> {{{notes}}} </div>
             {{/isnbig}} 
 
             <div class="tags-box">
