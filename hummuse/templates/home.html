@@ -2,8 +2,9 @@
 <html>  
 <head>
   <meta charset="utf-8">
-  <title>Hummuse Home</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">  <title>Hummuse Home</title>
   <link rel="stylesheet" type="text/css" href="static/css/bootstrap.css"/>
+  <link rel="stylesheet" type="text/css" href="static/font-awesome-4.4.0/css/font-awesome.min.css"/>
   <link rel="stylesheet" type="text/css" href="static/css/my_css.css"/>
 </head>
 
@@ -92,7 +93,7 @@
 
   <div class="left-panel panel-content">
     <a>
-      <div class="glyphicon glyphicon-th lef-panel-icons"></div> 
+      <div class="fa fa-area-chart lef-panel-icons"></div> 
       Dash Board
     </a>
   </div> 
@@ -150,7 +151,8 @@
         Add Event
       </a>
    </div> 
-
+  
+ 
   </div> 
 
   <div id="projects-panel" class="panel-content">	
@@ -389,27 +391,9 @@
             </label>
 
             <div class="col-md-8"> 
-              <div class="textarea-icon-group">
-                <div class="btn-group">
-                  <button class="btn" type="button" data-divbtn="bold" title="Bold">
-                    <i class="textarea-i-bold"></i>
-                  </button>
-                  <button class="btn" type="button" data-divbtn="italic" title="Italic">
-                    <i class="textarea-i-italic"></i>
-                  </button>
-                  <button class="btn" type="button" data-divbtn="underline" title="Underline">
-                    <i class="textarea-i-underline"></i>
-                  </button>
-                  <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
-                    <i class="textarea-i-ul"></i>
-                  </button>
-                  <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
-                    <i class="textarea-i-ol"></i>
-                  </button>
-                </div>
-              </div>   
-
-              <div id="notes-form" class="textarea-div" contenteditable="true" tabindex="5"></div>
+              <!-- icon-pad template -->
+              <div id="notes-form" class="textarea-div" contenteditable="true" tabindex="5">
+              </div>
             </div>
           </div>
 
@@ -497,26 +481,9 @@
               </label>
 
               <div class="col-md-8"> 
-                <div class="textarea-icon-group">
-                  <div class="btn-group">
-                    <button class="btn" type="button" data-divbtn="bold" title="Bold">
-                      <i class="textarea-i-bold"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="italic" title="Italic">
-                      <i class="textarea-i-italic"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="underline" title="Underline">
-                      <i class="textarea-i-underline"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
-                      <i class="textarea-i-ul"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
-                      <i class="textarea-i-ol"></i>
-                    </button>
-                  </div>
-                </div>   
-                <div id="notes-form-event" class="textarea-div" contenteditable="true" tabindex="5"></div>
+                <!-- Icon pad Goes inside templates-->
+                <div id="notes-form-event" class="textarea-div" contenteditable="true" tabindex="5">
+                </div>
               </div>
             </div>
 
@@ -684,25 +651,7 @@
               </label>
 
               <div class="col-md-8"> 
-                <div class="textarea-icon-group">
-                  <div class="btn-group">
-                    <button class="btn" type="button" data-divbtn="bold" title="Bold">
-                      <i class="textarea-i-bold"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="italic" title="Italic">
-                      <i class="textarea-i-italic"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="underline" title="Underline">
-                      <i class="textarea-i-underline"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
-                      <i class="textarea-i-ul"></i>
-                    </button>
-                    <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
-                      <i class="textarea-i-ol"></i>
-                    </button>
-                  </div>
-                </div>   
+                <!-- template -->
                 <div id="notes-form-edit-entry" class="textarea-div" contenteditable="true" tabindex="5"></div>
               </div>
             </div>
@@ -740,15 +689,145 @@
   </div>
   
 
+
+<!-- Modal8 - Paint Modal -->
+<div class="modal fade modal-center" id="paint-modal" role="modal" aria-labelledby="paint-modal-label" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">
+            <span class="fa fa-remove"></span>
+          </button>
+          
+          <div id="color-panel">
+            <div class="btn-group">
+            <button class="btn" type="button" data-color="red" title="Red" style="background-color:red">
+            </button>
+            <button class="btn" type="button" data-color="lime" title="Green" style="background-color:lime">  
+            </button>          
+            <button class="btn" type="button" data-color="blue" title="Blue" style="background-color:blue"> 
+            </button>          
+            <button class="btn" type="button" title="Yellow"  data-color="yellow" style="background-color:yellow">  
+            </button>          
+            <button class="btn" type="button"  data-color="magenta" title="Magenta" style="background-color:magenta"> 
+            </button>          
+            <button class="btn" type="button"  data-color="cyan" title="Cyan" style="background-color:cyan">  
+            </button>          
+            <button class="btn" type="button" title="Orange"  data-color="orange" style="background-color:orange">  
+            </button>          
+            <button class="btn" type="button"  data-color="purple" title="Purple" style="background-color:purple">  
+            </button>          
+                     
+            <button class="btn" type="button" title="Brown" data-color="brown"  style="background-color:brown"> 
+            </button>          
+            <button class="btn" type="button" title="Black"  data-color="black" style="background-color:black"> 
+            </button>     
+            <button class="btn" type="button" title="Gray"  data-color="gray" style="background-color:gray">  
+            </button>     
+            <button class="btn" type="button" title="lavender"  data-color="lavender" style="background-color:lavender">  
+            <button class="btn" type="button" data-color="white" title="White" style="background-color:white">
+            </button>  
+            </div>
+
+          </div>  
+
+          <div id="paint-undo-redo">
+            <div class="btn-group">
+              <button id="undo-tool" class="btn" type="button" title="Undo">  
+                <div class="fa fa-undo"></div>
+              </button>          
+              <button id="redo-tool" class="btn" type="button" title="Redo">  
+                <div class="fa fa-repeat"></div>
+              </button>          
+            </div>
+          </div>
+
+          <button id="paint-clear" type="button" class="btn btn-default">Clear</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="paint">
+            <div id="sketch">
+              <canvas id="canvas"></canvas>
+            </div>
+
+         <div id="paint-panel">
+
+          <div class="btn-group">
+              <button class="btn" type="button" data-divbtn="pencil" title="Pencil">
+                  <div class="fa fa-pencil"></div>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="line" title="Line">
+                  <b class="">&nbsp;|</b>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="eraser" title="Eraser">
+                  <div class="fa fa-eraser"></i>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="square" title="Square">
+                  <div class="fa fa-square-o"></div>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="fill" title="Fill">
+                  <div class="fa fa-tint"></div>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="circle" title="Circle">
+                  &nbsp;<div class="fa fa-circle-o"></div>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="text" title="Text">
+                  <div class="fa fa-font"></div>
+              </button>
+
+              <button class="btn" type="button" data-divbtn="ellipse" title="Ellipse">
+                  <div class="fa fa-opera"></div>
+              </button>
+
+          
+              
+          </div>
+
+          <form id="choose-size">
+              <div class="title">pick size</div>
+              <div class="radio-group">
+                <input type="radio" name="size" value="1">1</div>
+              <div class="radio-group">
+                <input type="radio" name="size" value="2" checked="checked">2</div>
+              <div class="radio-group"><input type="radio" name="size" value="3">3</div>
+              <div class="radio-group"><input type="radio" name="size" value="4">4</div>
+          </form>
+
+         </div>    
+
+        </div>  
+      </div> 
+
+        <div class="modal-footer">
+            
+            <button type="button" id="paint-submit" class="btn btn-success">
+              OK
+            </button>
+
+        </div>  
+        
+      </div>
+    </div>   
+  </div>  
+
+
+
 <!-- Mustache template - avoided by jinja -->
 {% raw %}
 <script id="template" type="x-tmpl-mustache">
 
     <div class="row">
       <div class="col-md-8 notes-area">
-        <ul>
+        
         {{#entries}}
-          <li id="{{eid}}" class="entry-box dropdown" data-iswork={{isWork}} data-h={{h}} data-m={{m}}>
+          <div id="{{eid}}" class="entry-box dropdown" data-iswork={{isWork}} data-h={{h}} data-m={{m}}>
            
             <div class="bullet-raja-pencil dropdown-toggle" data-toggle="dropdown"> 
               {{#isWork}}            
@@ -783,15 +862,9 @@
             {{^notes}}
               <i style="font-style:15px;">No notes</i>
             {{/notes}}  
-
-            {{#isnbig}}  
-                <div class="short-note note-area">{{{shortnotes}}}</div>
-                <div class="full-note note-area">{{{notes}}}</div>
-            {{/isnbig}}  
-
-            {{^isnbig}}  
-              <div class="note-area"> {{{notes}}} </div>
-            {{/isnbig}} 
+  
+            <div class="note-area"> {{{notes}}} </div>
+            
 
             <div class="tags-box">
             {{#tags}}
@@ -801,9 +874,9 @@
             {{/tags}}
             </div>  
             
-          </li>  
+          </div>  
         {{/entries}}  
-        </ul>  
+
       </div>
 
       <div class="col-md-4">
@@ -912,8 +985,175 @@
   </div>
 </script>
 
-{% endraw %}
+<script id="template-icon-pad" type="x-tmpl-mustache">
+  <div class="textarea-icon-group">
+    <div class="btn-group">
+        <button class="btn" type="button" data-divbtn="bold" title="Bold">
+          <b class="textarea-i-bold">B</b>
+        </button>
 
+        <button class="btn" type="button" data-divbtn="italic" title="Italic">
+          <i class="textarea-i-italic">I</i>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="underline" title="Underline">
+          <u class="textarea-i-underline">U</u>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="strikeThrough" title="Strike">
+          <strike class="textarea-i-strike">S</strike>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="formatBlock" title="Heading" data-val="h3">
+          <span class="textarea-i-h">H</span>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="insertUnorderedList" title="Unordered-List">
+          <span class="textarea-i-ul fa fa-list-ul"></span>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="insertOrderedList" title="Ordered-List">
+          <span class="textarea-i-ul fa fa-list-ol"></span>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="hiliteColor" title="Highlite" data-val="#FFFBCC">
+          <span class="textarea-i-hilite fa fa-eyedropper" style="background-color:#fffbcc;"></span>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="insertHorizontalRule" title="Horizontal Rule">
+          <span class="textarea-i-hrule fa fa-arrows-h"></span>
+        </button>
+
+    </div>
+                  
+    <div class="btn-group float-right">  
+
+        <button class="btn" type="button" data-divbtn="paint" title="Paint">
+          <div class="textarea-i-square fa fa-paint-brush"></div>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="icon" title="To-Do">
+          <div class="textarea-i-square fa fa-square-o"></div>
+        </button>
+
+        <button class="btn" type="button" data-divbtn="icon" title="Check">
+          <div class="textarea-i-check fa fa-check-square-o"></div>
+        </button>
+                 
+        
+          <span type="button" class="btn btn-default show-all-icons-button dropdown-toggle" data-toggle="dropdown">
+            <div class="fa fa-caret-down"></div> 
+          </span>
+
+          <ul class="dropdown-menu show-all-icons-dropdown-menu dropdown-menu-right" role="menu">
+            <button class="btn" type="button" data-divbtn="icon" title="To-Do">
+              <div class="textarea-i-square fa fa-square-o"></div>
+            </button>
+        
+            <button class="btn" type="button" data-divbtn="icon" title="Check">
+              <div class="textarea-i-check fa fa-check-square-o"></div>
+            </button>
+                 
+            <button class="btn" type="button" data-divbtn="icon" title="Bug">
+              <div class="textarea-i-bug fa fa-bug"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Remove">
+              <div class="textarea-i-remove fa fa-remove"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Thumbs up">
+              <div class="textarea-i-thumbs-up fa fa-thumbs-o-up"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Thumbs down">
+              <div class="textarea-i-thumbs-down fa fa-thumbs-o-down"></div>
+            </button>            
+
+            <button class="btn" type="button" data-divbtn="icon" title="Star">
+              <div class="textarea-i-star fa fa-star"></div>
+            </button>            
+
+            <button class="btn" type="button" data-divbtn="icon" title="Heart">
+              <div class="textarea-i-heart fa fa-heart"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Hand Right">
+              <div class="textarea-i-hand fa fa-hand-o-right"></div>
+            </button>
+
+
+            <button class="btn" type="button" data-divbtn="icon" title="Hand Left">
+              <div class="textarea-i-hand fa fa-hand-o-left"></div>
+            </button>
+
+
+            <button class="btn" type="button" data-divbtn="icon" title="Warning">
+              <div class="textarea-i-bug fa fa-warning"></div>
+            </button>
+
+
+            <button class="btn" type="button" data-divbtn="icon" title="Download">
+              <div class="textarea-i-download fa fa-download"></div>
+            </button>
+
+
+            <button class="btn" type="button" data-divbtn="icon" title="Trash">
+              <div class="textarea-i-trash fa fa-trash-o"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Lock">
+              <div class="textarea-i-lock fa fa-lock"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Ban">
+              <div class="textarea-i-bug fa fa-ban"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Bell">
+              <div class="textarea-i-star fa fa-bell"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Call">
+              <div class="textarea-i-phone fa fa-phone"></div>
+            </button>
+
+           <button class="btn" type="button" data-divbtn="icon" title="Music">
+              <div class="textarea-i-music fa fa-music"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Message">
+              <div class="textarea-i-star fa fa-envelope"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Comment">
+              <div class="textarea-i-comment fa fa-comment"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Question">
+              <div class="textarea-i-question fa fa-question-circle"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Flask">
+              <div class="textarea-i-phone fa fa-flask"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Trophy">
+              <div class="textarea-i-star fa fa-trophy"></div>
+            </button>
+
+            <button class="btn" type="button" data-divbtn="icon" title="Play">
+              <div class="textarea-i-play fa fa-futbol-o"></div>
+            </button>
+          </ul> 
+
+    </div>
+
+  </div>   
+
+</script>
+
+{% endraw %}
 
 
 

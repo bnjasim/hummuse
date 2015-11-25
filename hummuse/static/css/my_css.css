@@ -11,7 +11,7 @@ a:hover{
 */
 
 body{
-	font-family:  "Palatino Linotype", serif; /*georgia*/
+	font-family:  "Palatino Linotype", garamond, serif; /*georgia*/
 	font-size: 16px;
   overflow-y: scroll;
   background-color: #fcfcfc;
@@ -82,7 +82,7 @@ body.leave-fixed-space{
   margin-top: 20px;
   width: 130px;
   padding: 10px 5px !important;
-  font-family: Helvetica, Arial, Verdana, sans-serif;
+  font-family: Helvetica, "Open Sans" Arial, Verdana, sans-serif;
 }
 .timer-body{
   text-align: center;
@@ -361,11 +361,6 @@ body.leave-fixed-space{
   background-color: white;
 }
 
-/* for bullet raja pencil */
-.daily-box ul{
-  list-style-type: none;
-  margin-left: -15px;
-}
 
 .daily-box .bullet-raja-pencil{
   font-size: 13px !important;
@@ -404,7 +399,7 @@ body.leave-fixed-space{
 }
 
 .entry-box .note-area{
-  display: inline-block;
+  display: inline;
 }
 
 .entry-box .note-area ul{
@@ -418,13 +413,6 @@ body.leave-fixed-space{
   padding-left: 23px;
 }
 
-.entry-box .full-note{
-  display: none;
-}
-
-.entry-box .show-more-notes{
-  text-align: right;
-}
 
 .date-box{
   text-align: center;
@@ -690,40 +678,84 @@ label{
     margin-right: 0;
 }
 
+.textarea-icon-group{
+  background-color: #fbfbfb;
+  border-bottom: 2px solid #cccccc;
+}
 
-
+.textarea-icon-group .btn-group .btn{
+  background-color: #fbfbfb;
+  border-radius: 0px;
+  border: 1px solid rgba(200,150,200, 0.4);
+  padding: 3px 7px;
+  color: #555;
+}
+.textarea-icon-group .btn-group.float-right{
+  float: right;
+}
 /* Allows <i class="textarea-div-i-xxx" /> */
 [class^="textarea-i-"],
 [class*=" textarea-i-"] {
     display: inline-block;
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
     margin-top: 1px;
-    *margin-right: .3em;
-    line-height: 15px;
+    line-height: 20px;
     vertical-align: text-top;
-    background-image: url("../images/textarea-div-icons.png");
-    background-position: 0px 0px;
-    background-repeat: no-repeat;
+    
 }
 
 /* The individual RTA icons */
-.textarea-i-bold {
-  background-position: 0px 0px;
+.textarea-i-check {
+  color: green;
 }
-.textarea-i-italic {
-  background-position: -15px 0px;
+.textarea-i-bug {
+  color: #8E0000;
 }
-.textarea-i-underline {
-  background-position: -30px 0px;
+.textarea-i-remove {
+  color: #8E0000;
 }
-.textarea-i-ul {
-  background-position: -120px 0px;
+.textarea-i-square {
+  color: green;
 }
-.textarea-i-ol {
-  background-position: -135px 0px;
+.textarea-i-star {
+  color: #bbbb55;
 }
 
+.textarea-i-heart {
+  color: #ff5555;
+}
+
+.textarea-i-phone {
+  color: blue;
+}
+
+hr{
+  margin: 16px 15px;
+  border: 1px solid rgba(200,200,200,0.5);
+}
+
+.inserted-icon{
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 15px;
+}
+
+.inserted-image {
+  display: block;
+  width: 100%;
+  
+}
+
+.show-all-icons-dropdown-menu {
+  background-color: #ffffe5; 
+  padding-left: 12px;
+  width: 220px;
+}
+
+.show-all-icons-dropdown-menu .btn{
+  border: 0px !important;
+}
 
 #add-project-description{
   height: 70px;
@@ -849,4 +881,110 @@ label{
 
 .tooltip-inner{
   min-width: 120px;
+}
+
+
+
+#paint {
+  width: 100%;
+  height: 340px;
+}
+
+#sketch {
+  border: 2px solid gray;
+  position: relative;
+  float: left;
+  height: 100%;
+  width: 80%;
+  height: 100%;
+  padding: 10px;
+}
+
+
+
+#tmp_canvas {
+  position: absolute;
+  left: 10px; 
+  top: 10px;
+  cursor: crosshair;
+}
+
+#paint-panel {
+  padding: 0px 10px;
+  width: 20%;
+  height: 100%;
+  float: left;
+  border-radius: 4px;
+}
+
+#paint-panel .btn-group {
+  width: 90px;
+  margin: 0 auto;
+  display: block;
+  background-color: #fafafa;
+  overflow: auto;
+  padding: 0px 4px;
+}
+
+#choose-size {
+  width: 90px;
+  margin: 0 auto;
+  display: block;
+  margin-top: 20px;
+}
+
+#paint-panel .title {
+  font-weight: bold;
+  color: rgba(100,100,100, 0.8);
+  font-style: italic;
+  font-size: 13px;
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+#paint-panel .btn-group .btn{
+  background-color: #fafafa;
+}
+
+#paint-panel .radio-group {
+  display: block;
+  width: 30px;
+  margin: 0 auto;
+}
+
+
+#color-panel .btn-group {
+  border: 1px solid gray;
+}
+#color-panel .btn {
+  width: 30px;
+  height: 25px;
+  border: 1px solid rgba(200,200,200,0.8);
+}
+
+#color-panel {
+  margin-left: 20px;
+  display: inline-block;
+}
+
+#paint-undo-redo {
+  display: inline-block;
+  margin-left: 30px;
+}
+
+#paint-clear {
+  margin-left: 30px;
+  
+}
+
+#text_tool {
+    position: absolute;
+    border: 1px dashed black;
+    outline: 0;
+    display: none;
+    
+    padding: 4px 8px; 
+    font: 14px;
+    overflow: hidden;
+    white-space: nowrap;
 }
